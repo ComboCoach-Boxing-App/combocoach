@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { ShareWorkout } from '../components/ShareWorkout';
 import { Paywall } from '../components/Paywall';
 
+import { getUserRank } from '../utils/workoutUtils';
+
 export default function Activity() {
   const { totalWorkoutsCompleted, punchesThrownEst, activities, addManualActivity } = useAppStore();
   const [manualPunches, setManualPunches] = useState('');
@@ -51,7 +53,7 @@ export default function Activity() {
         </button>
       </div>
       
-      <div className="stat-grid">
+      <div className="stat-grid" style={{ marginBottom: '16px' }}>
         <div className="stat-item" style={{ gridColumn: 'span 2' }}>
            <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><TrendingUp size={16} /> Total Progress</span>
            <div className="flex-between" style={{ alignItems: 'flex-end', marginTop: '12px' }}>
@@ -76,6 +78,52 @@ export default function Activity() {
            <span className="stat-label">Total Rounds</span>
         </div>
       </div>
+
+      <section className="animate-in" style={{ animationDelay: '0.1s', marginBottom: '32px' }}>
+        <div className="glass-card" style={{ padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }}>
+          <div className="flex-between" style={{ marginBottom: '12px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Current Rank: {getUserRank(punchesThrownEst).title}
+            </span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
+              {getUserRank(punchesThrownEst).nextTitle ? `Next: ${getUserRank(punchesThrownEst).nextTitle}` : 'Max Level'}
+            </span>
+          </div>
+          
+          <div className="progress-bar-outer" style={{ height: '10px', marginBottom: '12px', background: 'rgba(255,255,255,0.05)' }}>
+            <div 
+              className="progress-bar-inner" 
+              style={{ 
+                width: `${Math.min(100, Math.max(0, getUserRank(punchesThrownEst).progress * 100))}%`,
+                background: 'linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
+                boxShadow: '0 0 10px rgba(var(--accent-primary-rgb), 0.3)'
+              }}
+            />
+          </div>
+
+          <div className="flex-between">
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              {getUserRank(punchesThrownEst).nextTierAt ? (getUserRank(punchesThrownEst).nextTierAt! - punchesThrownEst).toLocaleString() + ' punches to level up' : 'Ultimate Champion'}
+            </span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 800 }}>
+              {Math.round(getUserRank(punchesThrownEst).progress * 100)}%
+            </span>
+          </div>
+
+          {totalWorkoutsCompleted === 0 && (
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Ready to climb the ranks? Perform your first workout!</p>
+              <button 
+                className="btn-primary spring-press" 
+                style={{ fontSize: '0.85rem', width: '100%', padding: '12px' }} 
+                onClick={() => navigate('/workouts')}
+              >
+                Start Training
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="card" style={{ marginBottom: '32px' }}>
          <h2 className="heading-m" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>

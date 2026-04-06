@@ -1,6 +1,6 @@
 import { useAppStore } from '../store/useAppStore';
 import { getWOD } from '../data/workouts';
-import { Trophy, Zap, Clock, Target, Timer as TimerIcon, Wand2, Shield, Sparkles } from 'lucide-react';
+import { Trophy, Zap, Clock, Target, Timer as TimerIcon, Wand2, Shield, Sparkles, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import bannerImg from '../assets/hero_banner_new.png';
 import { calculateDynamicPunches, getUserRank } from '../utils/workoutUtils';
@@ -83,6 +83,21 @@ export default function Dashboard() {
         <img src={bannerImg} alt="Boxer" className="hero-image" />
         <div className="hero-overlay" />
         
+        <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
+          <button 
+            onClick={() => navigate('/settings')}
+            className="header-action sidebar-redundant"
+            style={{ 
+              background: 'rgba(0,0,0,0.4)', 
+              borderColor: 'rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)'
+            }}
+          >
+            <Settings size={22} />
+          </button>
+        </div>
+        
         <div className="hero-content">
           <span className="hero-subtitle">Dashboard</span>
           <h1 className="hero-title">{getWelcomeMessage()}</h1>
@@ -93,6 +108,51 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      <section className="animate-in" style={{ animationDelay: '0.05s', marginBottom: '24px' }}>
+        <div className="glass-card" style={{ padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }}>
+          <div className="flex-between" style={{ marginBottom: '12px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Leveling: {getUserRank(punchesThrownEst).title}
+            </span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
+              {getUserRank(punchesThrownEst).nextTitle ? `Next: ${getUserRank(punchesThrownEst).nextTitle}` : 'Max Level'}
+            </span>
+          </div>
+          
+          <div className="progress-bar-outer" style={{ height: '10px', marginBottom: '12px', background: 'rgba(255,255,255,0.05)' }}>
+            <div 
+              className="progress-bar-inner" 
+              style={{ 
+                width: `${Math.min(100, Math.max(0, getUserRank(punchesThrownEst).progress * 100))}%`,
+                background: 'linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
+                boxShadow: '0 0 10px rgba(var(--accent-primary-rgb), 0.3)'
+              }}
+            />
+          </div>
+
+          <div className="flex-between">
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              {getUserRank(punchesThrownEst).nextTierAt ? (getUserRank(punchesThrownEst).nextTierAt! - punchesThrownEst).toLocaleString() + ' punches to level up' : 'Ultimate Champion'}
+            </span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 800 }}>
+              {Math.round(getUserRank(punchesThrownEst).progress * 100)}%
+            </span>
+          </div>
+
+          {totalWorkoutsCompleted === 0 && (
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Ready to climb the ranks? Start your first workout!</p>
+              <button 
+                className="btn-primary spring-press" 
+                style={{ fontSize: '0.85rem', width: '100%', padding: '12px' }} 
+                onClick={() => navigate('/workouts')}
+              >
+                Begin Your Journey
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="progress-section animate-in" style={{ animationDelay: '0.1s' }}>
         <div className="progress-header">
@@ -187,44 +247,14 @@ export default function Dashboard() {
       </section>
 
       <section className="stat-grid animate-in" style={{ animationDelay: '0.3s' }}>
-        {totalWorkoutsCompleted === 0 ? (
-          <div className="glass-card" style={{ gridColumn: 'span 2', textAlign: 'center', padding: '32px 24px', borderRadius: '16px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '-10px', right: '-10px', opacity: 0.05 }}>
-              <Target size={120} />
-            </div>
-            <h3 className="heading-m" style={{ color: '#fff' }}>Start Your Journey</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '24px' }}>Complete your first workout to unlock stats and track your progress.</p>
-            <button className="btn-primary spring-press" style={{ fontSize: '0.85rem' }} onClick={() => navigate('/workouts')}>Explore Workouts</button>
-          </div>
-        ) : (
-          <>
-            <div className="stat-item">
-              <span className="stat-value">{totalWorkoutsCompleted}</span>
-              <span className="stat-label">Workouts</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-value">{punchesThrownEst.toLocaleString()}</span>
-              <span className="stat-label">Est. Punches</span>
-            </div>
-            
-            <div className="glass-card" style={{ gridColumn: 'span 2', padding: '16px', borderRadius: '16px', marginTop: '16px' }}>
-              <div className="flex-between" style={{ marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  Next Rank: {getUserRank(punchesThrownEst).nextTierAt ? getUserRank(punchesThrownEst).title : 'Max'}
-                </span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
-                  {getUserRank(punchesThrownEst).nextTierAt ? (getUserRank(punchesThrownEst).nextTierAt! - punchesThrownEst).toLocaleString() + ' left' : 'Maxed'}
-                </span>
-              </div>
-              <div className="progress-bar-outer" style={{ height: '8px', marginBottom: 0 }}>
-                <div 
-                  className="progress-bar-inner" 
-                  style={{ width: `${Math.min(100, Math.max(0, getUserRank(punchesThrownEst).progress * 100))}%` }}
-                />
-              </div>
-            </div>
-          </>
-        )}
+        <div className="stat-item">
+          <span className="stat-value">{totalWorkoutsCompleted}</span>
+          <span className="stat-label">Workouts</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-value">{punchesThrownEst.toLocaleString()}</span>
+          <span className="stat-label">Est. Punches</span>
+        </div>
       </section>
 
       {activities.length > 0 && (

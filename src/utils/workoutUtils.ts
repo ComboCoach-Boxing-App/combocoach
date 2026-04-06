@@ -69,11 +69,16 @@ export function isWarmup(workout: any): boolean {
 /**
  * Returns the user's boxing rank based on total estimated punches thrown.
  */
-export function getUserRank(punches: number): { title: string; nextTierAt: number | null; progress: number } {
-  if (punches < 5000) return { title: 'Rookie', nextTierAt: 5000, progress: punches / 5000 };
-  if (punches < 15000) return { title: 'Amateur', nextTierAt: 15000, progress: (punches - 5000) / 10000 };
-  if (punches < 30000) return { title: 'Contender', nextTierAt: 30000, progress: (punches - 15000) / 15000 };
-  if (punches < 100000) return { title: 'Professional', nextTierAt: 100000, progress: (punches - 30000) / 70000 };
-  if (punches < 250000) return { title: 'Champion', nextTierAt: 250000, progress: (punches - 100000) / 150000 };
-  return { title: 'Hall of Famer', nextTierAt: null, progress: 1 };
+export function getUserRank(punches: number): { 
+  title: string; 
+  nextTitle: string | null; 
+  nextTierAt: number | null; 
+  progress: number 
+} {
+  if (punches < 5000) return { title: 'Rookie', nextTitle: 'Amateur', nextTierAt: 5000, progress: punches / 5000 };
+  if (punches < 15000) return { title: 'Amateur', nextTitle: 'Contender', nextTierAt: 15000, progress: (punches - 5000) / 10000 };
+  if (punches < 30000) return { title: 'Contender', nextTitle: 'Professional', nextTierAt: 30000, progress: (punches - 15000) / 15000 };
+  if (punches < 100000) return { title: 'Professional', nextTitle: 'Champion', nextTierAt: 100000, progress: (punches - 30000) / 70000 };
+  if (punches < 250000) return { title: 'Champion', nextTitle: 'Hall of Famer', nextTierAt: 250000, progress: (punches - 100000) / 150000 };
+  return { title: 'Hall of Famer', nextTitle: null, nextTierAt: null, progress: 1 };
 }
