@@ -57,7 +57,7 @@ export function calculateDynamicPunches(workout: Workout | null | undefined, pac
     return sum + (matches ? matches.length : 0);
   }, 0);
   
-  const avgPunchesPerCombo = totalPunchesInCombos / workout.combinations.length;
+  const avgPunchesPerCombo = totalPunchesInCombos / allCombos.length;
   
   // Total work seconds
   const totalWorkSeconds = workout.rounds * workout.roundLength;

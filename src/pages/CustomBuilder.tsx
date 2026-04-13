@@ -32,11 +32,12 @@ export default function CustomBuilder() {
         setRestBetweenRounds(workoutToEdit.restBetweenRounds);
         
         // Load round combinations into the flat list with markers
-        if (workoutToEdit.roundCombinations && workoutToEdit.roundCombinations.length > 0) {
+        const roundCombos = workoutToEdit.roundCombinations;
+        if (roundCombos && roundCombos.length > 0) {
           const flatList: string[] = [];
-          workoutToEdit.roundCombinations.forEach((set: string[], idx: number) => {
+          roundCombos.forEach((set: string[], idx: number) => {
             flatList.push(...set);
-            if (idx < workoutToEdit.roundCombinations.length - 1) {
+            if (idx < roundCombos.length - 1) {
               flatList.push(ROUND_BREAK_MARKER);
             }
           });
