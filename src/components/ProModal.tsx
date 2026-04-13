@@ -6,10 +6,11 @@ export default function ProModal() {
 
   if (!isProModalOpen) return null;
 
-  const handleUpgrade = () => {
-    togglePro(); // Simulate payment success
+  const handleUpgrade = async () => {
+    await togglePro(); // Simulate payment success
     setProModalOpen(false);
   };
+
 
   const benefits = [
     {

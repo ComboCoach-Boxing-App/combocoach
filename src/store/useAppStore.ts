@@ -50,14 +50,18 @@ interface AppState {
   toggleStance: () => void;
   hasSeenSettingsTooltip: boolean;
   setHasSeenSettingsTooltip: (value: boolean) => void;
+  userId: string;
+  proSignature: string | null;
   isPro: boolean;
-  togglePro: () => void;
+  togglePro: () => Promise<void>;
+  verifyProStatus: () => Promise<void>;
   isProModalOpen: boolean;
   setProModalOpen: (open: boolean) => void;
   resetStats: () => void;
   fullReset: () => Promise<void>;
   seedDummyData: () => void;
 }
+
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -77,8 +81,26 @@ export const useAppStore = create<AppState>()(
       combinationMode: 'text',
       stance: 'orthodox',
       workoutPace: 30,
+      userId: crypto.randomUUID(),
+      proSignature: null,
       isPro: false,
-      togglePro: () => set((state) => ({ isPro: !state.isPro })),
+      togglePro: async () => {
+        const { isPro, userId } = useAppStore.getState();
+        const nextPro = !isPro;
+        const { signEntitlement } = await import('../utils/entitlements');
+        const signature = nextPro ? await signEntitlement(userId) : null;
+        set({ isPro: nextPro, proSignature: signature });
+      },
+      verifyProStatus: async () => {
+        const { isPro, userId, proSignature } = useAppStore.getState();
+        if (!isPro) return;
+        const { verifyEntitlement } = await import('../utils/entitlements');
+        const isValid = await verifyEntitlement(userId, proSignature);
+        if (!isValid) {
+          console.warn('Pro status verification failed. Reverting to free tier.');
+          set({ isPro: false, proSignature: null });
+        }
+      },
       isProModalOpen: false,
       setProModalOpen: (open) => set({ isProModalOpen: open }),
       selectedMusicProvider: 'none',
@@ -92,7 +114,7 @@ export const useAppStore = create<AppState>()(
       incrementWorkout: (punches, workoutId, title) => 
         set((state) => {
           const newActivity: ActivityItem = {
-            id: Math.random().toString(36).substring(7),
+            id: crypto.randomUUID(),
             type: 'workout',
             title: title || 'ComboCoach Training Session',
             punches: punches,
@@ -110,7 +132,7 @@ export const useAppStore = create<AppState>()(
       addManualActivity: (punches) => 
         set((state) => {
           const newActivity: ActivityItem = {
-            id: Math.random().toString(36).substring(7),
+            id: crypto.randomUUID(),
             type: 'manual',
             title: 'Manual Entry',
             punches: punches,
@@ -160,11 +182,13 @@ export const useAppStore = create<AppState>()(
           stance: 'orthodox',
           combinationMode: 'text',
           isPro: false,
+          proSignature: null,
           isProModalOpen: false,
           selectedMusicProvider: 'none',
           customWorkouts: []
         });
       },
+
       seedDummyData: () => set({
         totalWorkoutsCompleted: 4,
         punchesThrownEst: 3100,

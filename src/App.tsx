@@ -11,10 +11,19 @@ import GenerateWorkout from './pages/GenerateWorkout';
 import CustomBuilder from './pages/CustomBuilder';
 import LoadingScreen from './components/LoadingScreen';
 import ProModal from './components/ProModal';
+import { useEffect } from 'react';
+import { useAppStore } from './store/useAppStore';
 import './App.css';
 
 function App() {
+  const verifyProStatus = useAppStore(state => state.verifyProStatus);
+
+  useEffect(() => {
+    verifyProStatus();
+  }, [verifyProStatus]);
+
   return (
+
     <>
       <LoadingScreen />
       <ProModal />

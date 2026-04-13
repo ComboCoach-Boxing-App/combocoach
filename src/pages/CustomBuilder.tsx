@@ -11,7 +11,10 @@ const ROUND_BREAK_MARKER = ':::ROUND_BREAK:::';
 export default function CustomBuilder() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const editId = searchParams.get('edit');
+  const rawEditId = searchParams.get('edit');
+  // Only accept IDs matching the pattern we generate: "custom-<digits>"
+  const editId = rawEditId && /^custom-\d+$/.test(rawEditId) ? rawEditId : null;
+
   const isPro = useAppStore(state => state.isPro);
   const { addCustomWorkout, updateCustomWorkout, customWorkouts } = useAppStore();
 
@@ -75,6 +78,9 @@ export default function CustomBuilder() {
       return;
     }
 
+    // Sanitize title: strip HTML-injectable chars, enforce length limit (CWE-79)
+    const safeTitle = title.replace(/[<>"'`]/g, '').trim().slice(0, 100) || 'My Custom Workout';
+
     // Process combinations into round-specific sets
     const roundCombos: string[][] = [];
     let currentSet: string[] = [];
@@ -86,7 +92,9 @@ export default function CustomBuilder() {
           currentSet = [];
         }
       } else {
-        currentSet.push(item);
+        // Sanitize each combination string as well
+        const safeCombo = item.replace(/[<>"'`]/g, '').trim().slice(0, 200);
+        if (safeCombo) currentSet.push(safeCombo);
       }
     });
     if (currentSet.length > 0) roundCombos.push(currentSet);
@@ -94,7 +102,7 @@ export default function CustomBuilder() {
     const newWorkout: Workout = {
       id: editId || 'custom-' + Date.now().toString(),
       type: 'Solo Bag',
-      title: title,
+      title: safeTitle,
       duration: Math.ceil((rounds * roundLength + (rounds - 1) * restBetweenRounds) / 60),
       rounds: rounds,
       roundLength: roundLength,
@@ -117,6 +125,7 @@ export default function CustomBuilder() {
     }
     navigate('/workouts');
   };
+
 
   if (!isPro) {
     return (

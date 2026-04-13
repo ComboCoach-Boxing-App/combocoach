@@ -522,6 +522,7 @@ export default function Settings() {
           Resetting will permanently delete all your training history. You can also restore demo data to see how the app looks with active history.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {import.meta.env.DEV && (
           <button 
             className="btn-primary spring-press" 
             style={{ 
@@ -537,6 +538,7 @@ export default function Settings() {
           >
             <Wand2 size={18} /> Restore Demo Data
           </button>
+          )}
           
           <button 
             className="btn-primary spring-press" 
@@ -553,6 +555,7 @@ export default function Settings() {
         </div>
       </div>
 
+      {import.meta.env.DEV && (
       <div className="card animate-in" style={{ marginTop: '32px', border: '1px solid rgba(255, 255, 255, 0.1)', animationDelay: '0.25s', marginBottom: '40px' }}>
         <h2 className="heading-m" style={{ marginBottom: '16px', color: 'var(--text-muted)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '2px' }}>Developer Options</h2>
         <div className="flex-between spring-press" style={{ cursor: 'pointer' }} onClick={() => setProModalOpen(true)}>
@@ -627,6 +630,7 @@ export default function Settings() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

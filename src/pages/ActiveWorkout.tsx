@@ -151,7 +151,8 @@ export default function ActiveWorkout() {
     if (!recognitionRef.current) {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
-      recognition.interimResults = true;
+      // Use final results only — prevents ambient speech false-positives (OWASP A04)
+      recognition.interimResults = false;
       recognition.lang = 'en-US';
 
       recognition.onresult = (event: any) => {
@@ -160,8 +161,11 @@ export default function ActiveWorkout() {
 
         let transcript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
+          // Only process final results — interimResults is false but guard defensively
+          if (!event.results[i].isFinal) continue;
           transcript += event.results[i][0].transcript.toLowerCase();
         }
+        if (!transcript) return;
 
         const { 
           phase: currentPhase, 
@@ -252,14 +256,20 @@ export default function ActiveWorkout() {
       };
 
       recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
+        console.warn('Speech recognition error:', event.error);
+        // Stop retrying on permission-denied errors to prevent infinite restart loops
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          recognitionRef.current = null;
+        }
       };
 
       recognition.onend = () => {
         if (voiceCommandsEnabled && stateRef.current.phase !== 'Finished' && recognitionRef.current) {
           try {
             recognitionRef.current.start();
-          } catch (e) {}
+          } catch (e) {
+            console.warn('Speech recognition restart failed:', e);
+          }
         }
       };
 
@@ -337,7 +347,7 @@ export default function ActiveWorkout() {
   if (phase === 'Finished') {
     const dynamicPunches = calculateDynamicPunches(workout, workoutPace);
     const finishedActivity = {
-      id: Math.random().toString(36).substring(7),
+      id: crypto.randomUUID(),
       type: 'workout' as const,
       title: workout?.title || 'Boxing Session',
       punches: dynamicPunches,

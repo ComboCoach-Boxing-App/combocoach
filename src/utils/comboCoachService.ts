@@ -31,7 +31,28 @@ export const generateComboCoachWorkout = async (params: AIWorkoutParams): Promis
   if (!response.ok) {
     throw new Error('Failed to load combination data.');
   }
-  const combinations: Combo[] = await response.json();
+  const raw: unknown[] = await response.json();
+
+  // Runtime shape guard — rejects malformed or tampered entries (CWE-20)
+  const VALID_DIFFICULTIES = ['Beginner', 'Intermediate', 'Advanced'] as const;
+  const VALID_FOCUSES = ['Speed', 'Power', 'Defence', 'Conditioning', 'Footwork', 'Technique'] as const;
+  const VALID_STANCES = ['Orthodox', 'Southpaw'] as const;
+
+  const isValidCombo = (c: unknown): c is Combo =>
+    typeof c === 'object' && c !== null &&
+    typeof (c as any).id === 'number' &&
+    typeof (c as any).combination === 'string' &&
+    (c as any).combination.length > 0 &&
+    VALID_DIFFICULTIES.includes((c as any).difficulty) &&
+    VALID_FOCUSES.includes((c as any).focus) &&
+    VALID_STANCES.includes((c as any).stance_advice);
+
+  const combinations: Combo[] = raw.filter(isValidCombo);
+
+  if (combinations.length === 0) {
+    throw new Error('No valid combination data found.');
+  }
+
 
   // 2. Map Focus ('Defense' -> 'Defence' to match JSON)
   const mappedFocus = params.focus === 'Defense' ? 'Defence' : params.focus;
