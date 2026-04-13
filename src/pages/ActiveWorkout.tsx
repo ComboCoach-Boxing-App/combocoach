@@ -112,6 +112,15 @@ export default function ActiveWorkout() {
     return () => clearInterval(timer);
   }, [isRunning, timeLeft, phase]);
 
+  // Calculate the progress percentage for the current combination segment
+  const segmentProgress = (() => {
+    if (!workout || phase !== 'Work') return 0;
+    const totalPace = (timeLeft > (workout.roundLength - (workout.roundLength % workoutPace || workoutPace))) 
+      ? (workout.roundLength % workoutPace || workoutPace) 
+      : workoutPace;
+    return ((totalPace - ((timeLeft - 1) % workoutPace + 1)) / totalPace) * 100;
+  })();
+
   // Voice Commands Logic
   const recognitionRef = useRef<any>(null);
   const lastCommandTime = useRef<number>(0);
@@ -542,8 +551,8 @@ export default function ActiveWorkout() {
 
         <div className="info-column">
           {phase === 'Work' ? (
-            <div className={`combo-container ${burnoutModeEnabled && currentRound === workout.rounds && timeLeft <= 30 ? 'burnout-active' : ''}`} style={{ padding: '20px 24px', borderRadius: '16px' }}>
-               {burnoutModeEnabled && currentRound === workout.rounds && timeLeft <= 30 ? (
+            <div className={`combo-container ${burnoutModeEnabled && currentRound === workout?.rounds && timeLeft <= 30 ? 'burnout-active' : ''}`} style={{ padding: '20px 24px', borderRadius: '16px' }}>
+               {burnoutModeEnabled && currentRound === workout?.rounds && timeLeft <= 30 ? (
                  <div className="burnout-content animate-in">
                     <div className="burnout-label font-heading">BURNOUT PHASE</div>
                     <div className="burnout-main-text font-heading">NON-STOP 1 - 2s</div>
@@ -589,7 +598,7 @@ export default function ActiveWorkout() {
                           <div 
                               className="combo-progress-bar" 
                               style={{ 
-                                width: `${(( (timeLeft > (workout.roundLength - (workout.roundLength % workoutPace || workoutPace)) ? (workout.roundLength % workoutPace || workoutPace) : workoutPace) - ((timeLeft - 1) % workoutPace + 1)) / (timeLeft > (workout.roundLength - (workout.roundLength % workoutPace || workoutPace)) ? (workout.roundLength % workoutPace || workoutPace) : workoutPace)) * 100}%` 
+                                width: `${segmentProgress}%` 
                               }}
                           />
                         </div>

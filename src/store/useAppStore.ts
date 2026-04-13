@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { capacitorStorage } from '../utils/storage'
 import { Preferences } from '@capacitor/preferences'
-import { Workout } from '../data/workouts'
+import type { Workout } from '../data/workouts'
 
 interface ActivityItem {
   id: string;
