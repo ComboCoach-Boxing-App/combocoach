@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { WORKOUTS } from '../data/workouts';
 import { playBell, playTenSecWarning, playRoundEndBell, playTick, playCountdownTap } from '../utils/audio';
 import { translateCombination, calculateDynamicPunches, isWarmup } from '../utils/workoutUtils';
-
+import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../store/useAppStore';
 import { X, Pause, Play, Mic, Music } from 'lucide-react';
 import { ShareWorkout } from '../components/ShareWorkout';
@@ -13,8 +13,10 @@ type Phase = 'Idle' | 'Prepare' | 'Work' | 'Rest' | 'Finished';
 export default function ActiveWorkout() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const aiWorkout = useAppStore(state => state.aiWorkout);
-  const workout = id === 'ai-generated' ? aiWorkout : WORKOUTS.find(w => w.id === id);
+  const { aiWorkout, customWorkouts } = useAppStore();
+  const workout = id === 'ai-generated' 
+    ? aiWorkout 
+    : (WORKOUTS.find(w => w.id === id) || customWorkouts.find((w: any) => w.id === id));
 
   const incrementWorkout = useAppStore(state => state.incrementWorkout);
   const combinationMode = useAppStore(state => state.combinationMode);
@@ -29,7 +31,7 @@ export default function ActiveWorkout() {
   const isPro = useAppStore(state => state.isPro);
   const selectedMusicProvider = useAppStore(state => state.selectedMusicProvider);
 
-  const randomizedCombos = isWarmup(workout) ? false : randomizedCombosStatus;
+  const randomizedCombos = (isWarmup(workout) || workout?.id === 'ai-generated') ? false : randomizedCombosStatus;
   const burnoutModeEnabled = isWarmup(workout) ? false : burnoutModeStatus;
 
   const PACE_STEPS = [15, 20, 30, 45, 60];
@@ -39,9 +41,22 @@ export default function ActiveWorkout() {
   const [timeLeft, setTimeLeft] = useState(20); // 20s prep
   const [isRunning, setIsRunning] = useState(true);
   const [comboIndex, setComboIndex] = useState(() => {
-    if (!workout || !randomizedCombosStatus || workout.combinations.length <= 1) return 0;
-    return Math.floor(Math.random() * workout.combinations.length);
+    if (!workout || !randomizedCombosStatus) return 0;
+    const initialCombos = workout.roundCombinations && workout.roundCombinations.length > 0 
+      ? workout.roundCombinations[0] 
+      : workout.combinations;
+    if (initialCombos.length <= 1) return 0;
+    return Math.floor(Math.random() * initialCombos.length);
   });
+  
+  const getActiveCombos = (roundIndex: number) => {
+    if (workout?.roundCombinations && workout.roundCombinations.length > 0) {
+      // roundIndex is 0-based. Use modulo to loop back to the first set 
+      // if there are more rounds in the workout than defined combination rounds.
+      return workout.roundCombinations[roundIndex % workout.roundCombinations.length];
+    }
+    return workout?.combinations || [];
+  };
 
   const wakeLockRef = useRef<any>(null);
 
@@ -73,20 +88,21 @@ export default function ActiveWorkout() {
         setTimeLeft(t => t - 1);
         
         const nextTime = timeLeft - 1;
-        if (phase === 'Work' && nextTime > 0 && nextTime % workoutPace === 0 && nextTime !== workout!.roundLength) {
+        if (phase === 'Work' && nextTime > 0 && nextTime % workoutPace === 0 && nextTime !== (workout?.roundLength || 0)) {
           playTick();
+          const activeCombos = getActiveCombos(currentRound - 1);
           if (randomizedCombos) {
-            let nextIndex = Math.floor(Math.random() * workout!.combinations.length);
+            let nextIndex = Math.floor(Math.random() * activeCombos.length);
             // Non-sequential randomness: Ensure we don't repeat the same combo immediately 
             // if there are more than 1 options
-            if (workout!.combinations.length > 1) {
+            if (activeCombos.length > 1) {
               while (nextIndex === comboIndex) {
-                nextIndex = Math.floor(Math.random() * workout!.combinations.length);
+                nextIndex = Math.floor(Math.random() * activeCombos.length);
               }
             }
             setComboIndex(nextIndex);
           } else {
-            setComboIndex(prev => (prev + 1) % workout!.combinations.length);
+            setComboIndex(prev => (prev + 1) % activeCombos.length);
           }
         }
       }, 1000);
@@ -144,7 +160,6 @@ export default function ActiveWorkout() {
           workoutPace: currentPace, 
           randomizedCombos: currentRandom,
           comboIndex: currentIndex,
-          workout: currentWorkout,
           hapticsEnabled: currentHaptics
         } = stateRef.current;
 
@@ -154,14 +169,15 @@ export default function ActiveWorkout() {
         if (transcript.includes('next') || transcript.includes('skip') || transcript.includes('go')) {
           lastCommandTime.current = now;
           if (currentPhase === 'Work') {
-            if (currentRandom && currentWorkout!.combinations.length > 1) {
-              let nextIndex = Math.floor(Math.random() * currentWorkout!.combinations.length);
+            const activeCombos = getActiveCombos(currentRound - 1);
+            if (currentRandom && activeCombos.length > 1) {
+              let nextIndex = Math.floor(Math.random() * activeCombos.length);
               while (nextIndex === currentIndex) {
-                nextIndex = Math.floor(Math.random() * currentWorkout!.combinations.length);
+                nextIndex = Math.floor(Math.random() * activeCombos.length);
               }
               setComboIndex(nextIndex);
             } else {
-              setComboIndex(prev => (prev + 1) % currentWorkout!.combinations.length);
+              setComboIndex(prev => (prev + 1) % activeCombos.length);
             }
           } else if (currentPhase === 'Prepare' || currentPhase === 'Rest') {
             setTimeLeft(0); // Jump to next phase
@@ -173,14 +189,15 @@ export default function ActiveWorkout() {
         if (transcript.includes('previous') || transcript.includes('back')) {
           lastCommandTime.current = now;
           if (currentPhase === 'Work') {
-            if (currentRandom && currentWorkout!.combinations.length > 1) {
-              let prevIndex = Math.floor(Math.random() * currentWorkout!.combinations.length);
+            const activeCombos = getActiveCombos(currentRound - 1);
+            if (currentRandom && activeCombos.length > 1) {
+              let prevIndex = Math.floor(Math.random() * activeCombos.length);
               while (prevIndex === currentIndex) {
-                prevIndex = Math.floor(Math.random() * currentWorkout!.combinations.length);
+                prevIndex = Math.floor(Math.random() * activeCombos.length);
               }
               setComboIndex(prevIndex);
             } else {
-              setComboIndex(prev => (prev - 1 + currentWorkout!.combinations.length) % currentWorkout!.combinations.length);
+              setComboIndex(prev => (prev - 1 + activeCombos.length) % activeCombos.length);
             }
             if (currentHaptics && 'vibrate' in navigator) navigator.vibrate(100);
           }
@@ -274,28 +291,28 @@ export default function ActiveWorkout() {
 
   const handlePhaseEnd = () => {
     if (phase === 'Prepare') {
-      playBell();
       setPhase('Work');
-      setTimeLeft(workout!.roundLength);
+      setTimeLeft(workout?.roundLength || 180);
     } else if (phase === 'Work') {
       playRoundEndBell();
-      if (currentRound < workout!.rounds) {
+      if (currentRound < (workout?.rounds || 1)) {
         setPhase('Rest');
-        setTimeLeft(workout!.restBetweenRounds);
+        setTimeLeft(workout?.restBetweenRounds || 60);
       } else {
         setPhase('Finished');
         setIsRunning(false);
         const dynamicPunches = calculateDynamicPunches(workout, workoutPace);
-        incrementWorkout(dynamicPunches, workout!.id, workout!.title);
+        incrementWorkout(dynamicPunches, workout?.id, workout?.title);
         releaseWakeLock();
       }
     } else if (phase === 'Rest') {
       playBell();
       setPhase('Work');
       setCurrentRound(r => r + 1);
-      setTimeLeft(workout!.roundLength);
-      if (randomizedCombos && workout!.combinations.length > 1) {
-        setComboIndex(Math.floor(Math.random() * workout!.combinations.length));
+      setTimeLeft(workout?.roundLength || 180);
+      const activeCombos = getActiveCombos(currentRound); // next round
+      if (randomizedCombos && activeCombos.length > 1) {
+        setComboIndex(Math.floor(Math.random() * activeCombos.length));
       } else {
         setComboIndex(0);
       }
@@ -364,11 +381,8 @@ export default function ActiveWorkout() {
     <div className={`timer-overlay ${phase === 'Work' ? 'timer-state-work' : 'timer-state-rest'}`}>
       <div className="workout-bg-glow">
         <div 
-          className={isRunning && timeLeft <= 10 && phase === 'Work' ? 'animate-pulse' : ''}
-          style={{ background: phase === 'Work' 
-          ? 'radial-gradient(circle at center, rgba(239, 68, 68, 0.12) 0%, transparent 70%)' 
-          : 'radial-gradient(circle at center, rgba(59, 130, 246, 0.12) 0%, transparent 70%)' 
-        }}></div>
+          className={`${phase === 'Work' ? 'glow-work' : 'glow-rest'} ${isRunning && timeLeft <= 10 && phase === 'Work' ? 'animate-pulse-glow' : ''}`}
+        ></div>
       </div>
 
       <div className="flex-between workout-header" style={{ padding: '24px 32px' }}>
@@ -405,7 +419,7 @@ export default function ActiveWorkout() {
             {isRunning ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" style={{ marginLeft: '4px' }} />}
           </button>
 
-          {selectedMusicProvider !== 'none' && (
+          {selectedMusicProvider !== 'none' && Capacitor.isNativePlatform() && (
             <button 
               className="spring-press flex-center landscape-pause-header"
               onClick={() => {
@@ -452,7 +466,7 @@ export default function ActiveWorkout() {
                   height: '8px', 
                   borderRadius: '50%',
                   boxShadow: '0 0 10px var(--accent-primary)',
-                  animation: 'pulse 1s infinite'
+                  animation: 'dot-pulse 1s infinite'
                 }} />
               )}
               <Mic size={16} color={isRunning ? 'var(--accent-primary)' : 'var(--text-muted)'} className={isRunning ? 'animate-pulse' : ''} />
@@ -467,22 +481,19 @@ export default function ActiveWorkout() {
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-          <div className="font-heading" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '1px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.title}</div>
+          <div className="font-heading" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '1px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout?.title}</div>
           <div className="flex-center" style={{ gap: '16px' }}>
              <div className="font-heading" style={{ fontSize: '1.8rem', fontWeight: '900', color: '#fff', lineHeight: 1 }}>
-               RD {currentRound}<span style={{ opacity: 0.3, margin: '0 4px', fontSize: '1.2rem' }}>/</span><span style={{ opacity: 0.5, fontSize: '1.2rem' }}>{workout.rounds}</span>
+               RD {currentRound}<span style={{ opacity: 0.3, margin: '0 4px', fontSize: '1.2rem' }}>/</span><span style={{ opacity: 0.5, fontSize: '1.2rem' }}>{workout?.rounds || 0}</span>
              </div>
-             <div style={{ display: 'flex', gap: '4px' }}>
-                {Array.from({ length: workout.rounds }).map((_, i) => (
+             <div className="round-dots-grid">
+                {Array.from({ length: workout?.rounds || 0 }).map((_, i) => (
                   <div 
                     key={i} 
+                    className="round-dot"
                     style={{ 
-                      width: '6px', 
-                      height: '6px', 
-                      borderRadius: '50%', 
                       background: i + 1 < currentRound ? 'var(--accent-primary)' : i + 1 === currentRound ? '#fff' : 'rgba(255,255,255,0.15)',
-                      boxShadow: i + 1 === currentRound ? '0 0 8px rgba(255,255,255,0.8)' : 'none',
-                      transition: 'all 0.3s ease'
+                      boxShadow: i + 1 === currentRound ? '0 0 8px rgba(255,255,255,0.8)' : 'none'
                     }} 
                   />
                 ))}
@@ -507,7 +518,7 @@ export default function ActiveWorkout() {
                 stroke={phase === 'Work' ? 'var(--accent-primary)' : 'var(--accent-info)'}
                 strokeWidth="3.5"
                 strokeDasharray="289"
-                strokeDashoffset={289 - (289 * (timeLeft / (phase === 'Work' ? workout.roundLength : (phase === 'Prepare' ? 20 : workout.restBetweenRounds))))}
+                strokeDashoffset={289 - (289 * (timeLeft / (phase === 'Work' ? (workout?.roundLength || 1) : (phase === 'Prepare' ? 20 : (workout?.restBetweenRounds || 1)))))}
                 strokeLinecap="round"
                 style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s ease' }}
               />
@@ -547,8 +558,8 @@ export default function ActiveWorkout() {
                       {visualRhythmEnabled && !isWarmup(workout) ? (
                         <div className="rhythm-spans" key={comboIndex}>
                            {(combinationMode === 'text' 
-                             ? translateCombination(workout.combinations[comboIndex], stance) 
-                             : workout.combinations[comboIndex]
+                             ? translateCombination(getActiveCombos(currentRound - 1)[comboIndex], stance) 
+                             : getActiveCombos(currentRound - 1)[comboIndex]
                            ).split(' - ').map((part: string, idx: number, arr: string[]) => (
                              <span 
                                 key={idx} 
@@ -567,12 +578,12 @@ export default function ActiveWorkout() {
                         </div>
                       ) : (
                         combinationMode === 'text' 
-                          ? translateCombination(workout.combinations[comboIndex], stance) 
-                          : workout.combinations[comboIndex]
+                          ? translateCombination(getActiveCombos(currentRound - 1)[comboIndex], stance) 
+                          : getActiveCombos(currentRound - 1)[comboIndex]
                       )}
                   </div>
 
-                  {workout.combinations.length > 1 && timeLeft > workoutPace && (
+                  {getActiveCombos(currentRound - 1).length > 1 && timeLeft > workoutPace && (
                     <div className="combo-progress-section" style={{ width: '100%', marginTop: '16px' }}>
                         <div className="combo-progress-container">
                           <div 
@@ -585,19 +596,19 @@ export default function ActiveWorkout() {
                     </div>
                   )}
 
-                  {workout.combinations.length > 1 && (
+                  {getActiveCombos(currentRound - 1).length > 1 && (
                     <div className="coming-up-container">
                         <div className="coming-up-label font-heading" style={{ letterSpacing: '2px', fontSize: '0.8rem' }}>Coming Up</div>
                         <div className="coming-up-text font-heading" style={{ textTransform: randomizedCombos ? 'uppercase' : 'none' }}>
                           {timeLeft <= workoutPace ? (
-                            currentRound < workout.rounds ? 'Rest Break' : 'Workout Complete'
+                            currentRound < (workout?.rounds || 1) ? 'Rest Break' : 'Workout Complete'
                           ) : (
                             randomizedCombos ? (
                               <span style={{ color: 'var(--accent-primary)', fontSize: '0.9rem' }}>Random Combo</span>
                             ) : (
                               combinationMode === 'text' 
-                                ? translateCombination(workout.combinations[(comboIndex + 1) % workout.combinations.length], stance) 
-                                : workout.combinations[(comboIndex + 1) % workout.combinations.length]
+                                ? translateCombination(getActiveCombos(currentRound - 1)[(comboIndex + 1) % getActiveCombos(currentRound - 1).length], stance) 
+                                : getActiveCombos(currentRound - 1)[(comboIndex + 1) % getActiveCombos(currentRound - 1).length]
                             )
                           )}
                         </div>
@@ -615,7 +626,7 @@ export default function ActiveWorkout() {
                   {phase === 'Prepare' ? 'Get Ready Champ' : 'Next: Round ' + (currentRound + 1)}
                 </div>
                 
-                <div className="first-combo-preview">
+                 <div className="first-combo-preview">
                    <div className="coming-up-label font-heading" style={{ fontSize: '0.7rem', letterSpacing: '2px' }}>
                       Next Up: {isWarmup(workout)?'Exercise':'Combination'}
                    </div>
@@ -624,8 +635,8 @@ export default function ActiveWorkout() {
                         <span style={{ color: 'var(--accent-primary)' }}>SHUFFLED / RANDOM</span>
                       ) : (
                         combinationMode === 'text' 
-                         ? translateCombination(workout.combinations[0], stance) 
-                         : workout.combinations[0]
+                         ? translateCombination(getActiveCombos(phase === 'Prepare' ? 0 : currentRound)[0], stance) 
+                         : getActiveCombos(phase === 'Prepare' ? 0 : currentRound)[0]
                       )}
                    </div>
                 </div>
@@ -658,7 +669,7 @@ export default function ActiveWorkout() {
                   height: '6px', 
                   borderRadius: '50%',
                   boxShadow: '0 0 10px var(--accent-primary)',
-                  animation: 'pulse 1s infinite'
+                  animation: 'dot-pulse 1s infinite'
                 }} />
               )}
               <Mic size={14} color={isRunning ? 'var(--accent-primary)' : 'var(--text-muted)'} className={isRunning ? 'animate-pulse' : ''} />

@@ -10,6 +10,7 @@ export interface Workout {
   restBetweenRounds: number; // in seconds
   punchesEst: number;
   combinations: string[]; // List of combos to cycle through (1=Jab, 2=Cross, 3=Lead Hook, 4=Rear Hook, 5=Lead Upper, 6=Rear Upper)
+  roundCombinations?: string[][];
 }
 
 const UNSORTED_WORKOUTS: Workout[] = [

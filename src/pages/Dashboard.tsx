@@ -6,11 +6,11 @@ import bannerImg from '../assets/hero_banner_new.png';
 import { calculateDynamicPunches, getUserRank } from '../utils/workoutUtils';
 
 export default function Dashboard() {
-  const { 
-    totalWorkoutsCompleted, 
-    punchesThrownEst, 
-    completedDates, 
-    lastWorkoutId, 
+  const {
+    totalWorkoutsCompleted,
+    punchesThrownEst,
+    completedDates,
+    lastWorkoutId,
     workoutPace,
     activities,
     isPro,
@@ -31,25 +31,25 @@ export default function Dashboard() {
     const sortedDates = [...new Set(completedDates.map(d => d.split('T')[0]))].sort().reverse();
     let streak = 0;
     let today = new Date();
-    today.setHours(0,0,0,0);
-    
+    today.setHours(0, 0, 0, 0);
+
     let lastDate = new Date(sortedDates[0]);
-    lastDate.setHours(0,0,0,0);
-    
+    lastDate.setHours(0, 0, 0, 0);
+
     // If last workout was not today or yesterday, streak is 0
     const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays > 1) return 0;
-    
+
     streak = 1;
     for (let i = 0; i < sortedDates.length - 1; i++) {
-       const d1 = new Date(sortedDates[i]);
-       const d2 = new Date(sortedDates[i+1]);
-       const diff = Math.floor((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
-       if (diff === 1) {
-         streak++;
-       } else {
-         break;
-       }
+      const d1 = new Date(sortedDates[i]);
+      const d2 = new Date(sortedDates[i + 1]);
+      const diff = Math.floor((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
+      if (diff === 1) {
+        streak++;
+      } else {
+        break;
+      }
     }
     return streak;
   };
@@ -62,8 +62,8 @@ export default function Dashboard() {
     const distToMonday = currentDay === 0 ? 6 : currentDay - 1;
     const monday = new Date(now);
     monday.setDate(monday.getDate() - distToMonday);
-    monday.setHours(0,0,0,0);
-    
+    monday.setHours(0, 0, 0, 0);
+
     const completed = [false, false, false, false, false, false, false];
     completedDates.forEach(d => {
       const date = new Date(d);
@@ -78,17 +78,17 @@ export default function Dashboard() {
   const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
 
   return (
-    <div>
+    <div className="content-wrapper">
       <div className="hero-banner">
         <img src={bannerImg} alt="Boxer" className="hero-image" />
         <div className="hero-overlay" />
-        
+
         <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
-          <button 
+          <button
             onClick={() => navigate('/settings')}
             className="header-action sidebar-redundant"
-            style={{ 
-              background: 'rgba(0,0,0,0.4)', 
+            style={{
+              background: 'rgba(0,0,0,0.4)',
               borderColor: 'rgba(255,255,255,0.1)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)'
@@ -97,7 +97,7 @@ export default function Dashboard() {
             <Settings size={22} />
           </button>
         </div>
-        
+
         <div className="hero-content">
           <span className="hero-subtitle">Dashboard</span>
           <h1 className="hero-title">{getWelcomeMessage()}</h1>
@@ -118,11 +118,11 @@ export default function Dashboard() {
               {getUserRank(punchesThrownEst).nextTitle ? `Next: ${getUserRank(punchesThrownEst).nextTitle}` : 'Max Level'}
             </span>
           </div>
-          
+
           <div className="progress-bar-outer" style={{ height: '10px', marginBottom: '12px', background: 'rgba(255,255,255,0.05)' }}>
-            <div 
-              className="progress-bar-inner" 
-              style={{ 
+            <div
+              className="progress-bar-inner"
+              style={{
                 width: `${Math.min(100, Math.max(0, getUserRank(punchesThrownEst).progress * 100))}%`,
                 background: 'linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
                 boxShadow: '0 0 10px rgba(var(--accent-primary-rgb), 0.3)'
@@ -142,9 +142,9 @@ export default function Dashboard() {
           {totalWorkoutsCompleted === 0 && (
             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Ready to climb the ranks? Start your first workout!</p>
-              <button 
-                className="btn-primary spring-press" 
-                style={{ fontSize: '0.85rem', width: '100%', padding: '12px' }} 
+              <button
+                className="btn-primary spring-press"
+                style={{ fontSize: '0.85rem', width: '100%', padding: '12px' }}
                 onClick={() => navigate('/workouts')}
               >
                 Begin Your Journey
@@ -166,10 +166,10 @@ export default function Dashboard() {
             </span>
           </div>
         </div>
-        
+
         <div className="progress-bar-outer">
-          <div 
-            className="progress-bar-inner" 
+          <div
+            className="progress-bar-inner"
             style={{ width: `${(completedDays.filter(Boolean).length / 7) * 100}%` }}
           />
         </div>
@@ -183,48 +183,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {!isPro && (
-        <section className="animate-in" style={{ animationDelay: '0.15s', marginBottom: '24px' }}>
-          <div 
-            className="card spring-press" 
-            onClick={() => setProModalOpen(true)}
-            style={{ 
-              background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.05) 100%)', 
-              border: '1px solid rgba(255, 215, 0, 0.3)',
-              padding: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              borderRadius: '16px'
-            }}
-          >
-            <div style={{ 
-              width: '48px', 
-              height: '48px', 
-              borderRadius: '16px', 
-              background: 'rgba(255, 215, 0, 0.2)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              color: '#FFD700'
-            }}>
-              <Shield size={24} fill="currentColor" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: '900', color: '#fff' }}>Upgrade to Pro</span>
-                <Sparkles size={12} color="#FFD700" />
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', margin: 0 }}>Unlock AI ComboCoach, custom rounds & history</p>
-            </div>
-            <div style={{ background: '#FFD700', borderRadius: '8px', padding: '6px 12px', fontSize: '0.7rem', fontWeight: '900', color: '#000' }}>
-              GO PRO
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section className="wod-card animate-in" style={{ animationDelay: '0.2s' }}>
+      <section className="wod-card animate-in" style={{ animationDelay: '0.15s' }}>
         <div className="flex-between" style={{ alignItems: 'flex-start' }}>
           <div>
             <span style={{ color: 'var(--accent-primary)', fontWeight: '800', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '2px' }}>Workout of the Day</span>
@@ -237,14 +196,55 @@ export default function Dashboard() {
           </div>
           <Trophy color="var(--accent-secondary)" size={32} />
         </div>
-        <button 
-          className="btn-primary spring-press" 
+        <button
+          className="btn-primary spring-press"
           style={{ marginTop: '20px' }}
           onClick={() => navigate('/workout/' + wod.id)}
         >
           Start WOD
         </button>
       </section>
+
+      {!isPro && (
+        <section className="animate-in" style={{ animationDelay: '0.2s', marginBottom: '24px' }}>
+          <div
+            className="card spring-press"
+            onClick={() => setProModalOpen(true)}
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.05) 100%)',
+              border: '1px solid rgba(255, 215, 0, 0.3)',
+              padding: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              borderRadius: '16px'
+            }}
+          >
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '16px',
+              background: 'rgba(255, 215, 0, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#FFD700'
+            }}>
+              <Shield size={24} fill="currentColor" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: '900', color: '#fff' }}>Upgrade to Pro</span>
+                <Sparkles size={12} color="#FFD700" />
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', margin: 0 }}>Unlock the AI ComboCoach, custom rounds, history, social sharing and more!</p>
+            </div>
+            <div style={{ background: '#FFD700', borderRadius: '8px', padding: '6px 12px', fontSize: '0.7rem', fontWeight: '900', color: '#000' }}>
+              GO PRO
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="stat-grid animate-in" style={{ animationDelay: '0.3s' }}>
         <div className="stat-item">
@@ -261,7 +261,7 @@ export default function Dashboard() {
         <section className="animate-in" style={{ animationDelay: '0.35s', marginBottom: '32px' }}>
           <div className="flex-between" style={{ marginBottom: '16px' }}>
             <h2 className="heading-m" style={{ margin: 0 }}>Recent Session</h2>
-            <button 
+            <button
               onClick={() => navigate('/activity')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}
             >
@@ -269,16 +269,16 @@ export default function Dashboard() {
             </button>
           </div>
           <div className="workout-item" style={{ marginBottom: 0 }}>
-             <div className="workout-info">
-                <span className="stat-label" style={{ fontSize: '0.65rem' }}>{new Date(activities[0].timestamp).toLocaleDateString()}</span>
-                <h3 style={{ fontSize: '0.9rem', marginTop: '4px' }}>{activities[0].title}</h3>
-                <div className="workout-meta">
-                  <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{activities[0].punches} Punches</span>
-                </div>
-             </div>
-             <div className="header-action" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-                <Clock size={16} />
-             </div>
+            <div className="workout-info">
+              <span className="stat-label" style={{ fontSize: '0.65rem' }}>{new Date(activities[0].timestamp).toLocaleDateString()}</span>
+              <h3 style={{ fontSize: '0.9rem', marginTop: '4px' }}>{activities[0].title}</h3>
+              <div className="workout-meta">
+                <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{activities[0].punches} Punches</span>
+              </div>
+            </div>
+            <div className="header-action" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+              <Clock size={16} />
+            </div>
           </div>
         </section>
       )}

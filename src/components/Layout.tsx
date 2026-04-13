@@ -66,7 +66,7 @@ export default function Layout() {
   const progressPct = ((totalTime - timeLeft) / totalTime) * 100;
 
   return (
-    <div className={`app-wrapper ${isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'} ${phase !== 'Idle' ? 'hide-sidebar-active' : ''}`}>
+    <div className={`app-wrapper ${isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'} ${['Prepare', 'Work', 'Rest'].includes(phase) ? 'hide-sidebar-active' : ''}`}>
       {isRunning && !isTimerPage && (
         <NavLink to="/timer" className="active-timer-banner" style={{ position: 'relative', overflow: 'hidden' }}>
           <div className="banner-content">

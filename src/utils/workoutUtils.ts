@@ -37,10 +37,19 @@ export function translateCombination(combo: string, stance: 'orthodox' | 'southp
  * Calculates dynamic punch estimates based on pace and workout structure.
  */
 export function calculateDynamicPunches(workout: any, pace: number): number {
-  if (!workout || !workout.combinations || workout.combinations.length === 0) return 0;
+  if (!workout) return 0;
+  
+  let allCombos: string[] = [];
+  if (workout.roundCombinations && workout.roundCombinations.length > 0) {
+    allCombos = workout.roundCombinations.flat();
+  } else {
+    allCombos = workout.combinations || [];
+  }
+  
+  if (allCombos.length === 0) return 0;
   
   // Calculate average punches per combination in the workout
-  const totalPunchesInCombos = workout.combinations.reduce((sum: number, combo: string) => {
+  const totalPunchesInCombos = allCombos.reduce((sum: number, combo: string) => {
     // Count individual punches (digits 1-6)
     const matches = combo.match(/[1-6]/g);
     return sum + (matches ? matches.length : 0);

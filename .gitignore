@@ -48,5 +48,12 @@ Desktop.ini
 # Testing
 /coverage
 
+start-dev.bat
+To-do list.md
+
 .vercel
 .env*.local
+
+# Design
+/design
+/design_overview.md

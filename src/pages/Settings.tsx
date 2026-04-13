@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { Volume2, VolumeX, Vibrate, VibrateOff, Trash2, ArrowLeft, Type, Hash, Shield, Mic, MicOff, Timer, Wand2, ExternalLink, Lock, Music } from 'lucide-react';
+import { Volume2, VolumeX, Vibrate, VibrateOff, Trash2, ArrowLeft, Type, Hash, Shield, Mic, MicOff, Timer, Wand2, Lock, Music, Smartphone, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 
 export default function Settings() {
   const { 
@@ -11,7 +12,6 @@ export default function Settings() {
     combinationMode,
     stance,
     workoutPace,
-    geminiApiKey,
     isPro,
     selectedMusicProvider,
     toggleHaptics, 
@@ -27,11 +27,25 @@ export default function Settings() {
     visualRhythm,
     toggleVisualRhythm,
     setWorkoutPace,
-    setGeminiApiKey,
     setMusicProvider,
-    fullReset
+    fullReset,
+    addManualActivity
   } = useAppStore();
   const navigate = useNavigate();
+  const [manualPunches, setManualPunches] = useState('');
+
+  const handleManualAdd = () => {
+    const val = parseInt(manualPunches);
+    if (!isNaN(val) && val > 0) {
+      if (val > 100000) {
+        alert("Maximum 100,000 punches per manual entry for data integrity. Please log multiple sessions if needed.");
+        return;
+      }
+      addManualActivity(val);
+      setManualPunches('');
+      alert(`${val.toLocaleString()} punches added to history!`);
+    }
+  };
 
   const handleReset = async () => {
     if (window.confirm("ARE YOU SURE? This will permanently delete all history, settings, and API keys. This cannot be undone.")) {
@@ -40,10 +54,8 @@ export default function Settings() {
     }
   };
 
-  const [showKey, setShowKey] = useState(false);
-
   return (
-    <div className="animate-in">
+    <div className="animate-in content-wrapper">
       <div className="page-header">
         <h1 className="heading-xl">Settings</h1>
         <button 
@@ -110,6 +122,40 @@ export default function Settings() {
               position: 'absolute', 
               top: '3px', 
               left: hapticsEnabled ? '27px' : '3px', 
+              width: '20px', 
+              height: '20px', 
+              borderRadius: '50%', 
+              background: '#fff',
+              transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+            }} />
+          </div>
+        </div>
+
+        <div className="flex-between spring-press" style={{ marginBottom: '24px', cursor: 'pointer' }} onClick={toggleVisualRhythm}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ padding: '10px', borderRadius: '12px', background: visualRhythm ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.05)' }}>
+              <Hash size={22} color={visualRhythm ? "var(--accent-primary)" : "var(--text-muted)"} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '1rem', fontWeight: '700' }}>Visual Rhythm Guide</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Punch-by-punch lighting</span>
+            </div>
+          </div>
+          <div 
+            style={{ 
+              width: '50px', 
+              height: '26px', 
+              borderRadius: '16px', 
+              background: visualRhythm ? 'var(--accent-primary)' : 'var(--bg-card-hover)',
+              position: 'relative',
+              transition: 'all 0.3s ease',
+              pointerEvents: 'none'
+            }}
+          >
+            <div style={{ 
+              position: 'absolute', 
+              top: '3px', 
+              left: visualRhythm ? '27px' : '3px', 
               width: '20px', 
               height: '20px', 
               borderRadius: '50%', 
@@ -214,6 +260,81 @@ export default function Settings() {
           )}
         </div>
 
+        <div style={{ marginTop: '0', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.05)' }}>
+              <Music size={22} color="var(--accent-primary)" />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '1rem', fontWeight: '700' }}>Music Sync</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Quick-launch your favorite music app</span>
+            </div>
+          </div>
+          
+          {Capacitor.isNativePlatform() ? (
+            <div style={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: '10px',
+              padding: '4px'
+            }}>
+              {[
+                { id: 'none', label: 'None' },
+                { id: 'spotify', label: 'Spotify' },
+                { id: 'apple', label: 'Apple Music' },
+                { id: 'youtube', label: 'YT Music' }
+              ].map((provider) => (
+                <button
+                  key={provider.id}
+                  onClick={() => setMusicProvider(provider.id as any)}
+                  className="spring-press"
+                  style={{
+                    flex: '1 1 80px',
+                    padding: '12px 6px',
+                    borderRadius: '12px',
+                    border: '1px solid ' + (selectedMusicProvider === provider.id ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)'),
+                    background: selectedMusicProvider === provider.id ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                    color: selectedMusicProvider === provider.id ? 'var(--accent-primary)' : 'var(--text-muted)',
+                    fontSize: '0.8rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'center',
+                    minHeight: '44px'
+                  }}
+                >
+                  {provider.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div style={{ 
+              padding: '16px', 
+              borderRadius: '12px', 
+              background: 'rgba(255, 255, 255, 0.03)', 
+              border: '1px dashed rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '12px',
+              textAlign: 'center'
+            }}>
+              <Smartphone size={24} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-muted)' }}>Mobile App Only Feature</span>
+                <span style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.4)', lineHeight: '1.4' }}>
+                  Install the ComboCoach app on iOS or Android for seamless music synchronization.
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      <div className="card animate-in" style={{ marginTop: '32px', animationDelay: '0.12s' }}>
+        <h2 className="heading-m" style={{ marginBottom: '24px', letterSpacing: '0.5px' }}>Training Features</h2>
+
         <div className="flex-between spring-press" style={{ marginBottom: '24px', cursor: 'pointer' }} onClick={toggleCombinationMode}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.05)' }}>
@@ -248,7 +369,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="flex-between spring-press" style={{ marginBottom: '8px', cursor: 'pointer' }} onClick={toggleStance}>
+        <div className="flex-between spring-press" style={{ marginBottom: '24px', cursor: 'pointer' }} onClick={toggleStance}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.05)' }}>
               <Shield size={22} color="var(--accent-primary)" />
@@ -282,57 +403,6 @@ export default function Settings() {
           </div>
         </div>
 
-      </div>
-
-      <div className="card animate-in" style={{ marginTop: '32px', animationDelay: '0.12s' }}>
-        <h2 className="heading-m" style={{ marginBottom: '24px', letterSpacing: '0.5px' }}>Training Features</h2>
-
-        <div style={{ marginTop: '0', marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-            <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.05)' }}>
-              <Music size={22} color="var(--accent-primary)" />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '1rem', fontWeight: '700' }}>Music Sync</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Quick-launch your favorite music app</span>
-            </div>
-          </div>
-          
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
-            gap: '10px',
-            padding: '4px'
-          }}>
-            {[
-              { id: 'none', label: 'None' },
-              { id: 'spotify', label: 'Spotify' },
-              { id: 'apple', label: 'Apple Music' },
-              { id: 'youtube', label: 'YT Music' }
-            ].map((provider) => (
-              <button
-                key={provider.id}
-                onClick={() => setMusicProvider(provider.id as any)}
-                className="spring-press"
-                style={{
-                  padding: '12px 6px',
-                  borderRadius: '12px',
-                  border: '1px solid ' + (selectedMusicProvider === provider.id ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)'),
-                  background: selectedMusicProvider === provider.id ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                  color: selectedMusicProvider === provider.id ? 'var(--accent-primary)' : 'var(--text-muted)',
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'center'
-                }}
-              >
-                {provider.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div style={{ marginTop: '0', marginBottom: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
             <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.05)' }}>
@@ -345,8 +415,8 @@ export default function Settings() {
           </div>
           
           <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(5, 1fr)', 
+            display: 'flex', 
+            flexWrap: 'wrap', 
             gap: '10px',
             padding: '4px'
           }}>
@@ -356,6 +426,7 @@ export default function Settings() {
                 onClick={() => setWorkoutPace(pace)}
                 className="spring-press"
                 style={{
+                  flex: '1 1 60px',
                   padding: '12px 6px',
                   borderRadius: '12px',
                   border: '1px solid ' + (workoutPace === pace ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)'),
@@ -364,7 +435,8 @@ export default function Settings() {
                   fontSize: '0.9rem',
                   fontWeight: '700',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  minHeight: '44px'
                 }}
               >
                 {pace}s
@@ -409,7 +481,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="flex-between spring-press" style={{ marginBottom: '24px', cursor: 'pointer' }} onClick={toggleBurnoutMode}>
+        <div className="flex-between spring-press" style={{ marginBottom: '8px', cursor: 'pointer' }} onClick={toggleBurnoutMode}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ padding: '10px', borderRadius: '12px', background: burnoutMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.05)' }}>
               <Volume2 size={22} color={burnoutMode ? "var(--accent-primary)" : "var(--text-muted)"} />
@@ -442,115 +514,6 @@ export default function Settings() {
             }} />
           </div>
         </div>
-
-        <div className="flex-between spring-press" style={{ marginBottom: '8px', cursor: 'pointer' }} onClick={toggleVisualRhythm}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ padding: '10px', borderRadius: '12px', background: visualRhythm ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.05)' }}>
-              <Hash size={22} color={visualRhythm ? "var(--accent-primary)" : "var(--text-muted)"} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '1rem', fontWeight: '700' }}>Visual Rhythm Guide</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Punch-by-punch lighting</span>
-            </div>
-          </div>
-          <div 
-            style={{ 
-              width: '50px', 
-              height: '26px', 
-              borderRadius: '16px', 
-              background: visualRhythm ? 'var(--accent-primary)' : 'var(--bg-card-hover)',
-              position: 'relative',
-              transition: 'all 0.3s ease',
-              pointerEvents: 'none'
-            }}
-          >
-            <div style={{ 
-              position: 'absolute', 
-              top: '3px', 
-              left: visualRhythm ? '27px' : '3px', 
-              width: '20px', 
-              height: '20px', 
-              borderRadius: '50%', 
-              background: '#fff',
-              transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-            }} />
-          </div>
-        </div>
-      </div>
-
-      <div className="card animate-in" style={{ marginTop: '32px', border: '1px solid rgba(88, 204, 2, 0.3)', animationDelay: '0.15s' }}>
-        <h2 className="heading-m" style={{ marginBottom: '16px', color: 'var(--accent-primary)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Wand2 size={20} /> AI Integrations
-        </h2>
-        <p style={{ marginBottom: '16px', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.5' }}>
-          Enable dynamic AI workouts by providing a Google Gemini API Key.
-        </p>
-        
-        <div style={{ 
-          background: 'rgba(255, 255, 255, 0.03)', 
-          padding: '16px', 
-          borderRadius: '12px', 
-          marginBottom: '20px',
-          border: '1px solid var(--border)'
-        }}>
-          <h3 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>How to get a key:</h3>
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none', fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <li style={{ display: 'flex', gap: '8px' }}>
-              <span style={{ color: 'var(--accent-primary)', fontWeight: 900 }}>1.</span> 
-              <span>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 700 }}>Google AI Studio <ExternalLink size={12} style={{ display: 'inline', marginBottom: '-1px' }} /></a></span>
-            </li>
-            <li style={{ display: 'flex', gap: '8px' }}>
-              <span style={{ color: 'var(--accent-primary)', fontWeight: 900 }}>2.</span> 
-              <span>Click "Create API Key" (it's free)</span>
-            </li>
-            <li style={{ display: 'flex', gap: '8px' }}>
-              <span style={{ color: 'var(--accent-primary)', fontWeight: 900 }}>3.</span> 
-              <span>Paste your key in the field below</span>
-            </li>
-          </ul>
-        </div>
-
-        <div style={{ marginBottom: '8px' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px', textTransform: 'uppercase' }}>API Key</label>
-          <input 
-            type={showKey ? "text" : "password"}
-            placeholder="AIzaSy..."
-            value={geminiApiKey || ''}
-            onChange={(e) => setGeminiApiKey(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '14px 16px',
-              paddingRight: '120px',
-              borderRadius: '12px',
-              background: 'var(--bg-card-hover)',
-              border: '1px solid var(--border)',
-              color: '#fff',
-              fontSize: '1rem',
-              outline: 'none'
-            }}
-          />
-          <div style={{ position: 'absolute', right: '8px', top: '34px', display: 'flex', gap: '8px' }}>
-            <button 
-              onClick={() => setShowKey(!showKey)}
-              style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-muted)', padding: '6px 10px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: '700' }}
-            >
-              {showKey ? 'HIDE' : 'SHOW'}
-            </button>
-            {geminiApiKey && (
-              <button 
-                onClick={() => {
-                  if(confirm("Clear API Key?")) setGeminiApiKey('');
-                }}
-                style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--accent-primary)', padding: '6px 10px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: '700' }}
-              >
-                CLEAR
-              </button>
-            )}
-          </div>
-        </div>
-        <p style={{ marginTop: '12px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-          Your key is stored locally and never sent to our servers.
-        </p>
       </div>
 
       <div className="card animate-in" style={{ marginTop: '32px', border: '1px solid rgba(239, 68, 68, 0.3)', animationDelay: '0.2s' }}>
@@ -625,9 +588,44 @@ export default function Settings() {
             }} />
           </div>
         </div>
-        <p style={{ marginTop: '16px', fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+        <p style={{ marginTop: '16px', fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '24px' }}>
           This toggle is for testing the Freemium flow locally.
         </p>
+
+        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '24px', marginTop: '24px' }}>
+          <h3 style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <PlusCircle size={18} color="var(--accent-primary)" />
+            Log Manual Punches
+          </h3>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+            Testing utility to simulate workout volume.
+          </p>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <input 
+              type="number"
+              placeholder="e.g. 1200"
+              value={manualPunches}
+              onChange={(e) => setManualPunches(e.target.value)}
+              style={{
+                flex: 1,
+                background: 'var(--bg-app)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '10px',
+                color: '#fff',
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
+            />
+            <button 
+              className="btn-primary" 
+              style={{ width: 'auto', padding: '10px 20px', fontSize: '0.9rem' }}
+              onClick={handleManualAdd}
+            >
+              Add
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

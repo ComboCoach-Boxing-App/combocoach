@@ -1,14 +1,19 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, Plus, Trash2, CheckSquare } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { Paywall } from '../components/Paywall';
 import type { Workout } from '../data/workouts';
+import { calculateDynamicPunches } from '../utils/workoutUtils';
+
+const ROUND_BREAK_MARKER = ':::ROUND_BREAK:::';
 
 export default function CustomBuilder() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
   const isPro = useAppStore(state => state.isPro);
-  const addCustomWorkout = useAppStore(state => state.addCustomWorkout);
+  const { addCustomWorkout, updateCustomWorkout, customWorkouts } = useAppStore();
 
   const [title, setTitle] = useState('My Custom Workout');
   const [rounds, setRounds] = useState(3);
@@ -17,10 +22,43 @@ export default function CustomBuilder() {
   const [combinations, setCombinations] = useState<string[]>(['1 - 2', '1 - 2 - 3', '2 - 3 - 2']);
   const [newCombo, setNewCombo] = useState('');
 
+  useEffect(() => {
+    if (editId) {
+      const workoutToEdit = customWorkouts.find((w: any) => w.id === editId);
+      if (workoutToEdit) {
+        setTitle(workoutToEdit.title);
+        setRounds(workoutToEdit.rounds);
+        setRoundLength(workoutToEdit.roundLength);
+        setRestBetweenRounds(workoutToEdit.restBetweenRounds);
+        
+        // Load round combinations into the flat list with markers
+        if (workoutToEdit.roundCombinations && workoutToEdit.roundCombinations.length > 0) {
+          const flatList: string[] = [];
+          workoutToEdit.roundCombinations.forEach((set: string[], idx: number) => {
+            flatList.push(...set);
+            if (idx < workoutToEdit.roundCombinations.length - 1) {
+              flatList.push(ROUND_BREAK_MARKER);
+            }
+          });
+          setCombinations(flatList);
+        } else {
+          setCombinations(workoutToEdit.combinations);
+        }
+      }
+    }
+  }, [editId, customWorkouts]);
+
   const handleAddCombo = () => {
     if (newCombo.trim() !== '') {
       setCombinations([...combinations, newCombo.trim()]);
       setNewCombo('');
+    }
+  };
+
+  const handleAddRoundBreak = () => {
+    // Prevent multiple consecutive round breaks or one at the end/start if already present
+    if (combinations.length > 0 && combinations[combinations.length - 1] !== ROUND_BREAK_MARKER) {
+      setCombinations([...combinations, ROUND_BREAK_MARKER]);
     }
   };
 
@@ -31,32 +69,56 @@ export default function CustomBuilder() {
   };
 
   const handleSave = () => {
-    if (combinations.length === 0) {
+    if (combinations.length === 0 || combinations.every(c => c === ROUND_BREAK_MARKER)) {
       alert('Please add at least one combination.');
       return;
     }
 
+    // Process combinations into round-specific sets
+    const roundCombos: string[][] = [];
+    let currentSet: string[] = [];
+    
+    combinations.forEach(item => {
+      if (item === ROUND_BREAK_MARKER) {
+        if (currentSet.length > 0) {
+          roundCombos.push(currentSet);
+          currentSet = [];
+        }
+      } else {
+        currentSet.push(item);
+      }
+    });
+    if (currentSet.length > 0) roundCombos.push(currentSet);
+
     const newWorkout: Workout & { id: string } = {
-      id: 'custom-' + Date.now().toString(),
+      id: editId || 'custom-' + Date.now().toString(),
       type: 'Solo Bag',
       title: title,
       duration: Math.ceil((rounds * roundLength + (rounds - 1) * restBetweenRounds) / 60),
       rounds: rounds,
       roundLength: roundLength,
       restBetweenRounds: restBetweenRounds,
-      combinations: combinations,
+      combinations: roundCombos.length > 0 ? roundCombos[0] : combinations,
+      roundCombinations: roundCombos.length > 1 ? roundCombos : undefined,
       difficulty: 'Intermediate',
       focus: 'Conditioning',
-      punchesEst: 0
+      punchesEst: 0 // Will be calculated dynamically in ActiveWorkout
     };
 
-    addCustomWorkout(newWorkout);
+    // Calculate initial punchesEst for display in cards
+    newWorkout.punchesEst = calculateDynamicPunches(newWorkout, useAppStore.getState().workoutPace);
+
+    if (editId) {
+      updateCustomWorkout(editId, newWorkout);
+    } else {
+      addCustomWorkout(newWorkout);
+    }
     navigate('/workouts');
   };
 
   if (!isPro) {
     return (
-      <div className="animate-in" style={{ padding: '24px' }}>
+      <div className="animate-in content-wrapper" style={{ padding: '24px' }}>
         <div className="page-header" style={{ marginBottom: '24px' }}>
           <div>
             <h1 className="heading-xl">Custom Combos</h1>
@@ -74,11 +136,11 @@ export default function CustomBuilder() {
   }
 
   return (
-    <div className="animate-in" style={{ paddingBottom: '100px' }}>
+    <div className="animate-in content-wrapper" style={{ paddingBottom: '100px' }}>
       <div className="page-header">
         <div>
-          <h1 className="heading-xl">Combo Builder</h1>
-          <p>Design your own drills.</p>
+          <h1 className="heading-xl">{editId ? 'Edit Workout' : 'Combo Builder'}</h1>
+          <p>{editId ? 'Modify your routine.' : 'Design your own drills.'}</p>
         </div>
         <button onClick={() => navigate(-1)} className="header-action"><X size={22} /></button>
       </div>
@@ -149,15 +211,61 @@ export default function CustomBuilder() {
           </button>
         </div>
 
+        <button 
+          className="spring-press"
+          onClick={handleAddRoundBreak}
+          style={{ 
+            width: '100%', 
+            padding: '12px', 
+            borderRadius: '12px', 
+            background: 'rgba(255,255,255,0.05)', 
+            border: '1px dashed var(--border)', 
+            color: 'var(--accent-primary)',
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            letterSpacing: '1px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+        >
+          <Plus size={16} /> NEW ROUND START
+        </button>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {combinations.map((c, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <span style={{ fontWeight: 800, color: 'var(--accent-primary)', fontSize: '1.1rem' }}>{c}</span>
-              <button onClick={() => handleRemoveCombo(i)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}>
-                <Trash2 size={18} />
-              </button>
-            </div>
-          ))}
+          {(() => {
+            let roundCounter = 1;
+            return (
+              <>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Round {roundCounter} Start</div>
+                {combinations.map((c, i) => {
+                  if (c === ROUND_BREAK_MARKER) {
+                    roundCounter++;
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '12px 0 8px 0' }}>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-primary)', whiteSpace: 'nowrap' }}>ROUND {roundCounter} START</div>
+                        <button onClick={() => handleRemoveCombo(i)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', padding: '4px' }}>
+                          <X size={14} />
+                        </button>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <span style={{ fontWeight: 800, color: 'var(--accent-primary)', fontSize: '1.1rem' }}>{c}</span>
+                      <button onClick={() => handleRemoveCombo(i)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}>
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </>
+            );
+          })()}
           {combinations.length === 0 && (
             <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>No combos added.</div>
           )}
@@ -165,7 +273,7 @@ export default function CustomBuilder() {
       </div>
 
       <button className="btn-primary spring-press" onClick={handleSave} style={{ width: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '1.1rem' }}>
-        <CheckSquare size={20} fill="currentColor" /> SAVE WORKOUT
+        <CheckSquare size={20} fill="currentColor" /> {editId ? 'UPDATE WORKOUT' : 'SAVE WORKOUT'}
       </button>
 
     </div>

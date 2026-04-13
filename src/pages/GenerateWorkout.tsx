@@ -2,19 +2,19 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wand2, X, Settings2, Loader2, Info } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { generateAIWorkout } from '../utils/aiWorkoutService';
+import { generateComboCoachWorkout } from '../utils/comboCoachService';
 import { Paywall } from '../components/Paywall';
 
 export default function GenerateWorkout() {
   const navigate = useNavigate();
   const setAiWorkout = useAppStore(state => state.setAiWorkout);
+  const workoutPace = useAppStore(state => state.workoutPace);
   
   const [difficulty, setDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Intermediate');
+  const [progressiveDifficulty, setProgressiveDifficulty] = useState(false);
   const [rounds, setRounds] = useState(6);
   const [roundLength, setRoundLength] = useState(180); // seconds
   const [restPeriod, setRestPeriod] = useState(60); // seconds
-  const [pace, setPace] = useState(30); // Seconds per combo
-  const [warmup, setWarmup] = useState<'None' | 'Boxing' | 'Mix'>('Boxing');
   const [focus, setFocus] = useState<'Speed' | 'Power' | 'Defense' | 'Conditioning' | 'Footwork' | 'Technique'>('Conditioning');
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMSG, setErrorMSG] = useState<string | null>(null);
@@ -25,15 +25,15 @@ export default function GenerateWorkout() {
     setIsGenerating(true);
     setErrorMSG(null);
     try {
-      // For now, if we don't have a backend we mock or use the service.
-      // We will implement `generateAIWorkout` to call `.env` loaded API OR return a mocked error if missing.
-      const workout = await generateAIWorkout({
+      // Small simulated delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const workout = await generateComboCoachWorkout({
         difficulty,
+        progressiveDifficulty,
         rounds,
         roundLength,
         restPeriod,
-        pace,
-        warmup,
         focus
       });
       
@@ -46,8 +46,23 @@ export default function GenerateWorkout() {
     }
   };
 
+  const getProgressiveText = () => {
+    if (!progressiveDifficulty) return null;
+    if (difficulty === 'Beginner') {
+      return "All rounds will use Beginner combinations.";
+    }
+    if (difficulty === 'Intermediate') {
+      return "Starts with Beginner rounds, progresses to Intermediate.";
+    }
+    if (difficulty === 'Advanced') {
+      if (rounds < 3) return "Progression compressed — difficulty increases each round.";
+      return "Starts Beginner → Intermediate → Advanced across your rounds.";
+    }
+    return null;
+  };
+
   return (
-    <div className="animate-in">
+    <div className="animate-in content-wrapper">
       <div className="page-header">
         <div>
           <h1 className="heading-xl" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -66,7 +81,7 @@ export default function GenerateWorkout() {
       <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '20px' }}>
         
         {/* Difficulty */}
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <label style={{ display: 'block', marginBottom: '12px', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Difficulty</label>
           <div style={{ display: 'flex', gap: '8px' }}>
             {['Beginner', 'Intermediate', 'Advanced'].map(d => (
@@ -88,6 +103,42 @@ export default function GenerateWorkout() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Progressive Difficulty Toggle */}
+        <div style={{ marginBottom: '24px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+          <div className="flex-between spring-press" style={{ cursor: 'pointer', marginBottom: progressiveDifficulty ? '8px' : '0' }} onClick={() => setProgressiveDifficulty(!progressiveDifficulty)}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: '700' }}>Progressive Difficulty</span>
+            </div>
+            <div 
+              style={{ 
+                width: '42px', 
+                height: '24px', 
+                borderRadius: '12px', 
+                background: progressiveDifficulty ? 'var(--accent-primary)' : 'var(--bg-card-hover)',
+                position: 'relative',
+                transition: 'all 0.3s ease',
+                pointerEvents: 'none'
+              }}
+            >
+              <div style={{ 
+                position: 'absolute', 
+                top: '3px', 
+                left: progressiveDifficulty ? '21px' : '3px', 
+                width: '18px', 
+                height: '18px', 
+                borderRadius: '50%', 
+                background: '#fff',
+                transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+              }} />
+            </div>
+          </div>
+          {progressiveDifficulty && (
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+               {getProgressiveText()}
+             </div>
+          )}
         </div>
 
         {/* Focus */}
@@ -123,7 +174,7 @@ export default function GenerateWorkout() {
           </div>
           <input 
             type="range" 
-            min="1" max="15" 
+            min="1" max="20" 
             value={rounds} 
             onChange={(e) => setRounds(Number(e.target.value))}
             style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
@@ -161,45 +212,27 @@ export default function GenerateWorkout() {
           </div>
         </div>
 
-        {/* Pace Options */}
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', marginBottom: '12px', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Combo Pace</label>
-           <select 
-            value={pace}
-            onChange={(e) => setPace(Number(e.target.value))}
-            className="ai-select"
-          >
-            <option value="15">Fast (15s)</option>
-            <option value="20">Brisk (20s)</option>
-            <option value="30">Medium (30s)</option>
-            <option value="45">Steady (45s)</option>
-            <option value="60">Slow (60s)</option>
-          </select>
-        </div>
-
-        {/* Warmup Options */}
+        {/* Pace Options Info */}
         <div style={{ marginBottom: '8px' }}>
-          <label style={{ display: 'block', marginBottom: '12px', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Include Warmup</label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-             {['None', 'Boxing', 'Mix'].map(w => (
-              <button
-                key={w}
-                onClick={() => setWarmup(w as any)}
-                className="spring-press"
-                style={{
-                  flex: 1,
-                  padding: '10px 0',
-                  borderRadius: '12px',
-                  border: `1px solid ${warmup === w ? '#fff' : 'var(--border)'}`,
-                  background: warmup === w ? 'rgba(255,255,255,0.1)' : 'transparent',
-                  color: warmup === w ? '#fff' : 'var(--text-main)',
-                  fontSize: '0.9rem'
-                }}
-              >
-                {w}
-              </button>
-            ))}
-          </div>
+          <label style={{ display: 'block', marginBottom: '12px', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Combo Pace</label>
+           <div 
+             onClick={() => navigate('/settings')}
+             className="spring-press"
+             style={{ 
+               cursor: 'pointer', 
+               padding: '12px', 
+               background: 'rgba(255,255,255,0.03)', 
+               borderRadius: '12px', 
+               fontSize: '0.85rem', 
+               color: 'var(--text-muted)', 
+               display: 'flex', 
+               alignItems: 'center', 
+               gap: '8px',
+               border: '1px solid var(--border)'
+             }}
+           >
+             <Info size={16} color="var(--accent-primary)"/> Uses your global setting of <strong>{workoutPace}s</strong> pacing <span style={{ marginLeft: 'auto', fontSize: '0.7rem', opacity: 0.6 }}>CHANGE →</span>
+           </div>
         </div>
       </div>
 
@@ -213,7 +246,7 @@ export default function GenerateWorkout() {
         <div style={{ background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
           <Paywall 
             title="AI ComboCoach" 
-            description="Unlock the ability to generate infinite, customized boxing workouts tailored to your goals using Gemini AI."
+            description="Unlock the ability to select from 500+ curated boxing combinations grouped by stance, focus, and difficulty."
             feature="Pro Feature: AI ComboCoach"
           />
         </div>
@@ -237,7 +270,7 @@ export default function GenerateWorkout() {
           disabled={isGenerating}
         >
           {isGenerating ? (
-            <><Loader2 size={24} className="animate-spin" color="var(--accent-primary)" /> Sequencing Rounds...</>
+            <><Loader2 size={24} className="animate-spin" color="var(--accent-primary)" /> Retrieving Combos...</>
           ) : (
             <><Settings2 size={24} /> Generate & Start</>
           )}

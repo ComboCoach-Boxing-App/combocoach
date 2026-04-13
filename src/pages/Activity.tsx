@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { PlusCircle, TrendingUp, Calendar, Settings, Trophy, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -8,21 +7,8 @@ import { Paywall } from '../components/Paywall';
 import { getUserRank } from '../utils/workoutUtils';
 
 export default function Activity() {
-  const { totalWorkoutsCompleted, punchesThrownEst, activities, addManualActivity } = useAppStore();
-  const [manualPunches, setManualPunches] = useState('');
+  const { totalWorkoutsCompleted, punchesThrownEst, activities } = useAppStore();
   const navigate = useNavigate();
-
-  const handleManualAdd = () => {
-    const val = parseInt(manualPunches);
-    if (!isNaN(val) && val > 0) {
-      if (val > 100000) {
-        alert("Maximum 100,000 punches per manual entry for data integrity. Please log multiple sessions if needed.");
-        return;
-      }
-      addManualActivity(val);
-      setManualPunches('');
-    }
-  };
 
   const formatTimestamp = (isoString: string) => {
     const date = new Date(isoString);
@@ -40,9 +26,8 @@ export default function Activity() {
     
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
-
-  return (
-    <div className="activity-page">
+    return (
+    <div className="activity-page content-wrapper">
       <div className="page-header">
         <h1 className="heading-xl">Activity</h1>
         <button 
@@ -123,41 +108,6 @@ export default function Activity() {
             </div>
           )}
         </div>
-      </section>
-
-      <section className="card" style={{ marginBottom: '32px' }}>
-         <h2 className="heading-m" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-           <PlusCircle size={20} color="var(--accent-primary)" />
-           Log Manual Punches
-         </h2>
-         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            Did some bag work or a class without the app?
-         </p>
-         <div style={{ display: 'flex', gap: '12px' }}>
-            <input 
-              type="number"
-              placeholder="e.g. 1200"
-              value={manualPunches}
-              onChange={(e) => setManualPunches(e.target.value)}
-              style={{
-                flex: 1,
-                background: 'var(--bg-app)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '12px',
-                color: '#fff',
-                fontSize: '1rem',
-                outline: 'none'
-              }}
-            />
-            <button 
-              className="btn-primary" 
-              style={{ width: 'auto', padding: '12px 24px' }}
-              onClick={handleManualAdd}
-            >
-              Add
-            </button>
-         </div>
       </section>
 
       <div className="activity-history">

@@ -32,13 +32,15 @@ export default function Timer() {
 
   if (phase === 'Finished') {
     return (
-      <div className="completed-state">
-        <h1 className="heading-xl">COMPLETED</h1>
-        <p style={{ margin: '20px 0', color: 'var(--text-muted)' }}>Great work, Champ.</p>
-        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>Session Finished</div>
-        <button className="btn-primary" style={{ marginTop: '40px' }} onClick={stopTimer}>
-          Back to Settings
-        </button>
+      <div className="animate-in content-wrapper">
+        <div className="completed-state">
+          <h1 className="heading-xl">COMPLETED</h1>
+          <p style={{ margin: '20px 0', color: 'var(--text-muted)' }}>Great work, Champ.</p>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>Session Finished</div>
+          <button className="btn-primary" style={{ marginTop: '40px' }} onClick={stopTimer}>
+            Back to Timer
+          </button>
+        </div>
       </div>
     );
   }
@@ -48,11 +50,8 @@ export default function Timer() {
       <div className={`timer-overlay ${phase === 'Work' ? 'timer-state-work' : 'timer-state-rest'}`}>
         <div className="workout-bg-glow">
           <div 
-            className={isRunning && timeLeft <= 10 && phase === 'Work' ? 'animate-pulse' : ''}
-            style={{ background: phase === 'Work' 
-            ? 'radial-gradient(circle at center, rgba(239, 68, 68, 0.12) 0%, transparent 70%)' 
-            : 'radial-gradient(circle at center, rgba(59, 130, 246, 0.12) 0%, transparent 70%)' 
-          }}></div>
+            className={`${phase === 'Work' ? 'glow-work' : 'glow-rest'} ${isRunning && timeLeft <= 10 && phase === 'Work' ? 'animate-pulse-glow' : ''}`}
+          ></div>
         </div>
 
         <div className="flex-between workout-header" style={{ padding: '24px 32px' }}>
@@ -111,7 +110,7 @@ export default function Timer() {
                     height: '8px', 
                     borderRadius: '50%',
                     boxShadow: '0 0 10px var(--accent-primary)',
-                    animation: 'pulse 1s infinite'
+                    animation: 'dot-pulse 1s infinite'
                   }} />
                 )}
                 <Mic size={16} color={isRunning ? 'var(--accent-primary)' : 'var(--text-muted)'} className={isRunning ? 'animate-pulse' : ''} />
@@ -131,17 +130,14 @@ export default function Timer() {
                <div className="font-heading" style={{ fontSize: '1.8rem', fontWeight: '900', color: '#fff', lineHeight: 1 }}>
                  RD {currentRound}<span style={{ opacity: 0.3, margin: '0 4px', fontSize: '1.2rem' }}>/</span><span style={{ opacity: 0.5, fontSize: '1.2rem' }}>{rounds}</span>
                </div>
-               <div style={{ display: 'flex', gap: '4px' }}>
+               <div className="round-dots-grid">
                   {Array.from({ length: rounds }).map((_, i) => (
                     <div 
                       key={i} 
+                      className="round-dot"
                       style={{ 
-                        width: '6px', 
-                        height: '6px', 
-                        borderRadius: '50%', 
                         background: i + 1 < currentRound ? 'var(--accent-primary)' : i + 1 === currentRound ? '#fff' : 'rgba(255,255,255,0.15)',
                         boxShadow: i + 1 === currentRound ? '0 0 8px rgba(255,255,255,0.8)' : 'none',
-                        transition: 'all 0.3s ease'
                       }} 
                     />
                   ))}
@@ -216,7 +212,7 @@ export default function Timer() {
                     height: '6px', 
                     borderRadius: '50%',
                     boxShadow: '0 0 10px var(--accent-primary)',
-                    animation: 'pulse 1s infinite'
+                    animation: 'dot-pulse 1s infinite'
                   }} />
                 )}
                 <Mic size={14} color={isRunning ? 'var(--accent-primary)' : 'var(--text-muted)'} className={isRunning ? 'animate-pulse' : ''} />
@@ -238,7 +234,7 @@ export default function Timer() {
   }
 
   return (
-    <div className="animate-in">
+    <div className="animate-in content-wrapper">
       <div className="page-header">
         <h1 className="heading-xl">Timer</h1>
         <button 

@@ -12,7 +12,9 @@ import {
   Zap,
   Info,
   Wand2,
-  Volume2
+  Volume2,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { Shadowbox, HeavyBag, BoxingPads } from '../components/Icons';
 
@@ -28,10 +30,27 @@ export default function WorkoutDetail() {
     burnoutMode,
     toggleBurnoutMode,
     isPro,
-    setProModalOpen
+    setProModalOpen,
+    customWorkouts,
+    removeCustomWorkout
   } = useAppStore();
 
-  const workout = id === 'ai-generated' ? aiWorkout : WORKOUTS.find(w => w.id === id);
+  const workout = id === 'ai-generated' 
+    ? aiWorkout 
+    : (WORKOUTS.find(w => w.id === id) || customWorkouts.find((w: any) => w.id === id));
+
+  const isCustom = id?.startsWith('custom-');
+
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this custom workout?')) {
+      removeCustomWorkout(id!);
+      navigate('/workouts');
+    }
+  };
+
+  const handleEdit = () => {
+    navigate(`/workout/custom-builder?edit=${id}`);
+  };
 
   if (!workout) {
     return (
@@ -80,7 +99,7 @@ export default function WorkoutDetail() {
   };
 
   return (
-    <div className="workout-detail-page animate-in">
+    <div className="workout-detail-page animate-in content-wrapper">
       <div className="detail-header" style={{ position: 'relative', marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <button 
@@ -98,20 +117,54 @@ export default function WorkoutDetail() {
             <ChevronLeft size={24} />
           </button>
 
-          <button 
-            onClick={() => navigate(`/workout/${workout.id}/active`)}
-            className="btn-primary spring-press"
-            style={{ 
-              width: 'auto',
-              padding: '8px 16px',
-              height: 'auto',
-              fontSize: '0.8rem',
-              borderRadius: '10px'
-            }}
-          >
-            <Play fill="currentColor" size={14} />
-            START
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {isCustom && (
+              <>
+                <button 
+                  onClick={handleEdit}
+                  className="back-button spring-press"
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.05)', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: '12px', 
+                    padding: '8px', 
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Pencil size={20} />
+                </button>
+                <button 
+                  onClick={handleDelete}
+                  className="back-button spring-press"
+                  style={{ 
+                    background: 'rgba(239, 68, 68, 0.05)', 
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    borderRadius: '12px', 
+                    padding: '8px', 
+                    color: 'var(--accent-primary)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Trash2 size={20} />
+                </button>
+              </>
+            )}
+            <button 
+              onClick={() => navigate(`/workout/${workout.id}/active`)}
+              className="btn-primary spring-press"
+              style={{ 
+                width: 'auto',
+                padding: '8px 16px',
+                height: 'auto',
+                fontSize: '0.8rem',
+                borderRadius: '10px'
+              }}
+            >
+              <Play fill="currentColor" size={14} />
+              START
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>

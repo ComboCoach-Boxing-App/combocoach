@@ -29,17 +29,16 @@ interface AppState {
   combinationMode: 'numbers' | 'text';
   stance: 'orthodox' | 'southpaw';
   workoutPace: number; // Seconds per combination
-  geminiApiKey: string | null;
   incrementWorkout: (punches: number, workoutId?: string, title?: string) => void;
   addManualActivity: (punches: number) => void;
   setAiWorkout: (workout: any) => void;
   setWorkoutPace: (pace: number) => void;
-  setGeminiApiKey: (key: string) => void;
   selectedMusicProvider: 'none' | 'spotify' | 'apple' | 'youtube';
   setMusicProvider: (provider: 'none' | 'spotify' | 'apple' | 'youtube') => void;
   customWorkouts: any[];
   addCustomWorkout: (workout: any) => void;
   removeCustomWorkout: (id: string) => void;
+  updateCustomWorkout: (id: string, workout: any) => void;
   toggleHaptics: () => void;
   toggleSound: () => void;
   toggleVoiceCommands: () => void;
@@ -74,10 +73,9 @@ export const useAppStore = create<AppState>()(
       randomizedCombos: false,
       burnoutMode: true,
       visualRhythm: true,
-      combinationMode: 'numbers',
+      combinationMode: 'text',
       stance: 'orthodox',
       workoutPace: 30,
-      geminiApiKey: null,
       isPro: false,
       togglePro: () => set((state) => ({ isPro: !state.isPro })),
       isProModalOpen: false,
@@ -87,6 +85,9 @@ export const useAppStore = create<AppState>()(
       customWorkouts: [],
       addCustomWorkout: (workout) => set((state) => ({ customWorkouts: [...state.customWorkouts, workout] })),
       removeCustomWorkout: (id) => set((state) => ({ customWorkouts: state.customWorkouts.filter((w: any) => w.id !== id) })),
+      updateCustomWorkout: (id, workout) => set((state) => ({
+        customWorkouts: state.customWorkouts.map((w: any) => w.id === id ? { ...workout, id } : w)
+      })),
       incrementWorkout: (punches, workoutId, title) => 
         set((state) => {
           const newActivity: ActivityItem = {
@@ -122,7 +123,6 @@ export const useAppStore = create<AppState>()(
         }),
       setAiWorkout: (workout) => set({ aiWorkout: workout }),
       setWorkoutPace: (pace) => set({ workoutPace: pace }),
-      setGeminiApiKey: (key) => set({ geminiApiKey: key }),
       toggleHaptics: () => set((state) => ({ hapticsEnabled: !state.hapticsEnabled })),
       toggleVoiceCommands: () => set((state) => ({ voiceCommandsEnabled: !state.voiceCommandsEnabled })),
       toggleSound: () => set((state) => ({ soundEnabled: !state.soundEnabled })),
@@ -148,7 +148,6 @@ export const useAppStore = create<AppState>()(
           lastWorkoutId: null, 
           activities: [], 
           hasSeenSettingsTooltip: false,
-          geminiApiKey: null,
           aiWorkout: null,
           hapticsEnabled: true,
           voiceCommandsEnabled: true,
@@ -158,7 +157,7 @@ export const useAppStore = create<AppState>()(
           visualRhythm: true,
           workoutPace: 30,
           stance: 'orthodox',
-          combinationMode: 'numbers',
+          combinationMode: 'text',
           isPro: false,
           isProModalOpen: false,
           selectedMusicProvider: 'none',
