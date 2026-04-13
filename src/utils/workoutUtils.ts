@@ -1,3 +1,5 @@
+import { Workout } from '../data/workouts';
+
 const orthodoxMap: Record<string, string> = {
   '1': 'Jab',
   '2': 'Cross',
@@ -36,7 +38,7 @@ export function translateCombination(combo: string, stance: 'orthodox' | 'southp
 /**
  * Calculates dynamic punch estimates based on pace and workout structure.
  */
-export function calculateDynamicPunches(workout: any, pace: number): number {
+export function calculateDynamicPunches(workout: Workout | null, pace: number): number {
   if (!workout) return 0;
   
   let allCombos: string[] = [];
@@ -70,7 +72,7 @@ export function calculateDynamicPunches(workout: any, pace: number): number {
  * Checks if a workout should be considered a warmup,
  * which disables features like randomization and burnout.
  */
-export function isWarmup(workout: any): boolean {
+export function isWarmup(workout: Workout | null): boolean {
   if (!workout) return false;
   return workout.focus === 'Warmup' || workout.type === 'Warming up';
 }

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { capacitorStorage } from '../utils/storage'
 import { Preferences } from '@capacitor/preferences'
+import { Workout } from '../data/workouts'
 
 interface ActivityItem {
   id: string;
@@ -18,7 +19,7 @@ interface AppState {
   punchesThrownEst: number;
   completedDates: string[];
   lastWorkoutId: string | null;
-  aiWorkout: any | null;
+  aiWorkout: Workout | null;
   activities: ActivityItem[];
   hapticsEnabled: boolean;
   voiceCommandsEnabled: boolean;
@@ -31,14 +32,14 @@ interface AppState {
   workoutPace: number; // Seconds per combination
   incrementWorkout: (punches: number, workoutId?: string, title?: string) => void;
   addManualActivity: (punches: number) => void;
-  setAiWorkout: (workout: any) => void;
+  setAiWorkout: (workout: Workout) => void;
   setWorkoutPace: (pace: number) => void;
   selectedMusicProvider: 'none' | 'spotify' | 'apple' | 'youtube';
   setMusicProvider: (provider: 'none' | 'spotify' | 'apple' | 'youtube') => void;
-  customWorkouts: any[];
-  addCustomWorkout: (workout: any) => void;
+  customWorkouts: Workout[];
+  addCustomWorkout: (workout: Workout) => void;
   removeCustomWorkout: (id: string) => void;
-  updateCustomWorkout: (id: string, workout: any) => void;
+  updateCustomWorkout: (id: string, workout: Partial<Workout>) => void;
   toggleHaptics: () => void;
   toggleSound: () => void;
   toggleVoiceCommands: () => void;
@@ -84,9 +85,9 @@ export const useAppStore = create<AppState>()(
       setMusicProvider: (provider) => set({ selectedMusicProvider: provider }),
       customWorkouts: [],
       addCustomWorkout: (workout) => set((state) => ({ customWorkouts: [...state.customWorkouts, workout] })),
-      removeCustomWorkout: (id) => set((state) => ({ customWorkouts: state.customWorkouts.filter((w: any) => w.id !== id) })),
+      removeCustomWorkout: (id) => set((state) => ({ customWorkouts: state.customWorkouts.filter((w) => w.id !== id) })),
       updateCustomWorkout: (id, workout) => set((state) => ({
-        customWorkouts: state.customWorkouts.map((w: any) => w.id === id ? { ...workout, id } : w)
+        customWorkouts: state.customWorkouts.map((w) => w.id === id ? { ...w, ...workout, id } : w)
       })),
       incrementWorkout: (punches, workoutId, title) => 
         set((state) => {

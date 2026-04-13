@@ -24,7 +24,7 @@ export default function CustomBuilder() {
 
   useEffect(() => {
     if (editId) {
-      const workoutToEdit = customWorkouts.find((w: any) => w.id === editId);
+      const workoutToEdit = customWorkouts.find((w) => w.id === editId);
       if (workoutToEdit) {
         setTitle(workoutToEdit.title);
         setRounds(workoutToEdit.rounds);
@@ -90,7 +90,7 @@ export default function CustomBuilder() {
     });
     if (currentSet.length > 0) roundCombos.push(currentSet);
 
-    const newWorkout: Workout & { id: string } = {
+    const newWorkout: Workout = {
       id: editId || 'custom-' + Date.now().toString(),
       type: 'Solo Bag',
       title: title,
@@ -102,7 +102,8 @@ export default function CustomBuilder() {
       roundCombinations: roundCombos.length > 1 ? roundCombos : undefined,
       difficulty: 'Intermediate',
       focus: 'Conditioning',
-      punchesEst: 0 // Will be calculated dynamically in ActiveWorkout
+      punchesEst: 0, // Will be calculated dynamically in ActiveWorkout
+      isCustom: true
     };
 
     // Calculate initial punchesEst for display in cards

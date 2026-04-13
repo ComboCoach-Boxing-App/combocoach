@@ -193,7 +193,7 @@ export default function Workouts() {
             paddingRight: '16px',
             scrollbarWidth: 'none'
           }} className="no-scrollbar">
-            {[...customWorkouts].reverse().slice(0, 5).map((w: any) => (
+            {[...customWorkouts].reverse().slice(0, 5).map((w) => (
               <div 
                 key={w.id} 
                 className="workout-item spring-press" 

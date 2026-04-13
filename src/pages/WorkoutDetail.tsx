@@ -37,7 +37,7 @@ export default function WorkoutDetail() {
 
   const workout = id === 'ai-generated' 
     ? aiWorkout 
-    : (WORKOUTS.find(w => w.id === id) || customWorkouts.find((w: any) => w.id === id));
+    : (WORKOUTS.find(w => w.id === id) || customWorkouts.find((w) => w.id === id));
 
   const isCustom = id?.startsWith('custom-');
 

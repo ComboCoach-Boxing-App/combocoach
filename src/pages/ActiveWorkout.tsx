@@ -16,7 +16,7 @@ export default function ActiveWorkout() {
   const { aiWorkout, customWorkouts } = useAppStore();
   const workout = id === 'ai-generated' 
     ? aiWorkout 
-    : (WORKOUTS.find(w => w.id === id) || customWorkouts.find((w: any) => w.id === id));
+    : (WORKOUTS.find(w => w.id === id) || customWorkouts.find((w) => w.id === id));
 
   const incrementWorkout = useAppStore(state => state.incrementWorkout);
   const combinationMode = useAppStore(state => state.combinationMode);
