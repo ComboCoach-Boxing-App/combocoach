@@ -11,21 +11,31 @@ import GenerateWorkout from './pages/GenerateWorkout';
 import CustomBuilder from './pages/CustomBuilder';
 import LoadingScreen from './components/LoadingScreen';
 import ProModal from './components/ProModal';
+import AuthScreen from './pages/AuthScreen';
 import { useEffect } from 'react';
 import { useAppStore } from './store/useAppStore';
+import { useAuth } from './contexts/AuthContext';
 import './App.css';
 
 function App() {
   const verifyProStatus = useAppStore(state => state.verifyProStatus);
+  const { user, isGuest, loading } = useAuth();
 
   useEffect(() => {
     verifyProStatus();
   }, [verifyProStatus]);
 
-  return (
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
+  if (!user && !isGuest) {
+    return <AuthScreen />;
+  }
+
+  return (
     <>
-      <LoadingScreen />
+      {user === null && isGuest && <LoadingScreen />} {/* Minimal loading if guest takes a sec */}
       <ProModal />
       <BrowserRouter>
         <Routes>

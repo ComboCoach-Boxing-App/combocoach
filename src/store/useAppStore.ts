@@ -3,8 +3,16 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { capacitorStorage } from '../utils/storage'
 import { Preferences } from '@capacitor/preferences'
 import type { Workout } from '../data/workouts'
+import {
+  pushUserSettings,
+  pushActivity,
+  pushUserStats,
+  pushCustomWorkout,
+  deleteCustomWorkoutCloud,
+  fetchUserDataFromCloud
+} from '../utils/sync'
 
-interface ActivityItem {
+export interface ActivityItem {
   id: string;
   type: 'workout' | 'manual' | 'timer';
   title: string;
@@ -50,7 +58,9 @@ interface AppState {
   toggleStance: () => void;
   hasSeenSettingsTooltip: boolean;
   setHasSeenSettingsTooltip: (value: boolean) => void;
-  userId: string;
+  userId: string; // Keep this for legacy local id
+  supabaseUserId: string | null;
+  setSupabaseUser: (userId: string | null) => Promise<void>;
   proSignature: string | null;
   isPro: boolean;
   togglePro: () => Promise<void>;
@@ -81,7 +91,77 @@ export const useAppStore = create<AppState>()(
       combinationMode: 'text',
       stance: 'orthodox',
       workoutPace: 30,
+      stance: 'orthodox',
+      workoutPace: 30,
       userId: crypto.randomUUID(),
+      supabaseUserId: null,
+      setSupabaseUser: async (userId) => {
+        if (!userId) {
+          set({ supabaseUserId: null });
+          return;
+        }
+        
+        set({ supabaseUserId: userId });
+        
+        // Fetch cloud data and overwrite local state if present
+        const cloudData = await fetchUserDataFromCloud(userId);
+        if (cloudData) {
+          const updates: Partial<AppState> = {};
+          
+          if (cloudData.profile) {
+            // Note: Since verifyProStatus will run on boot and reset pro to false if no local signature is found,
+            // we should trust the cloud's response on login for Cross-Platform sync.
+            updates.isPro = cloudData.profile.is_pro === true;
+          }
+
+          if (cloudData.settings) {
+            updates.hapticsEnabled = cloudData.settings.haptics_enabled ?? true;
+            updates.voiceCommandsEnabled = cloudData.settings.voice_commands_enabled ?? true;
+            updates.soundEnabled = cloudData.settings.sound_enabled ?? true;
+            updates.burnoutMode = cloudData.settings.burnout_mode ?? true;
+            updates.visualRhythm = cloudData.settings.visual_rhythm ?? true;
+            updates.randomizedCombos = cloudData.settings.randomized_combos ?? false;
+            updates.stance = cloudData.settings.stance || 'orthodox';
+            updates.combinationMode = cloudData.settings.combination_mode || 'text';
+            updates.workoutPace = cloudData.settings.workout_pace || 30;
+          }
+          
+          if (cloudData.stats) {
+            updates.totalWorkoutsCompleted = cloudData.stats.total_workouts || 0;
+            updates.punchesThrownEst = cloudData.stats.total_punches || 0;
+          }
+          
+          if (cloudData.activities && cloudData.activities.length > 0) {
+            updates.activities = cloudData.activities.map((a: any) => ({
+              id: a.id,
+              type: a.type,
+              title: a.title,
+              punches: a.punches,
+              duration: a.duration_seconds,
+              timestamp: a.completed_at
+            }));
+          }
+          
+          if (cloudData.workouts && cloudData.workouts.length > 0) {
+            updates.customWorkouts = cloudData.workouts.map((w: any) => ({
+              id: w.id,
+              title: w.title,
+              difficulty: w.difficulty || 'Beginner',
+              focus: w.focus || 'Technique',
+              duration: w.duration || 15,
+              type: w.type || 'Solo Bag',
+              rounds: w.rounds || 4,
+              roundLength: w.round_length_seconds || 180,
+              restBetweenRounds: w.rest_seconds || 60,
+              combinations: w.combinations || [],
+              roundCombinations: w.round_combinations,
+              isCustom: true
+            }));
+          }
+          
+          set(updates);
+        }
+      },
       proSignature: null,
       isPro: false,
       togglePro: async () => {
@@ -106,11 +186,30 @@ export const useAppStore = create<AppState>()(
       selectedMusicProvider: 'none',
       setMusicProvider: (provider) => set({ selectedMusicProvider: provider }),
       customWorkouts: [],
-      addCustomWorkout: (workout) => set((state) => ({ customWorkouts: [...state.customWorkouts, workout] })),
-      removeCustomWorkout: (id) => set((state) => ({ customWorkouts: state.customWorkouts.filter((w) => w.id !== id) })),
-      updateCustomWorkout: (id, workout) => set((state) => ({
-        customWorkouts: state.customWorkouts.map((w) => w.id === id ? { ...w, ...workout, id } : w)
-      })),
+      addCustomWorkout: (workout) => {
+        set((state) => {
+          const newState = { customWorkouts: [...state.customWorkouts, workout] };
+          if (state.supabaseUserId) pushCustomWorkout(state.supabaseUserId, workout);
+          return newState;
+        });
+      },
+      removeCustomWorkout: (id) => {
+        set((state) => {
+          const newState = { customWorkouts: state.customWorkouts.filter((w) => w.id !== id) };
+          if (state.supabaseUserId) deleteCustomWorkoutCloud(state.supabaseUserId, id);
+          return newState;
+        });
+      },
+      updateCustomWorkout: (id, workout) => {
+        set((state) => {
+          const updatedWorkouts = state.customWorkouts.map((w) => w.id === id ? { ...w, ...workout, id } as Workout : w);
+          if (state.supabaseUserId) {
+            const updated = updatedWorkouts.find(w => w.id === id);
+            if (updated) pushCustomWorkout(state.supabaseUserId, updated);
+          }
+          return { customWorkouts: updatedWorkouts };
+        });
+      },
       incrementWorkout: (punches, workoutId, title) => 
         set((state) => {
           const newActivity: ActivityItem = {
@@ -121,11 +220,19 @@ export const useAppStore = create<AppState>()(
             timestamp: new Date().toISOString()
           };
           const safePunches = Math.max(0, isNaN(punches) ? 0 : punches);
+          const totalWk = state.totalWorkoutsCompleted + 1;
+          const totalP = (state.punchesThrownEst || 0) + safePunches;
+
+          if (state.supabaseUserId) {
+            pushActivity(state.supabaseUserId, newActivity);
+            pushUserStats(state.supabaseUserId, totalWk, totalP);
+          }
+
           return { 
-            totalWorkoutsCompleted: state.totalWorkoutsCompleted + 1,
-            punchesThrownEst: (state.punchesThrownEst || 0) + safePunches,
-            completedDates: [...state.completedDates, new Date().toISOString()],
-            activities: [newActivity, ...state.activities].slice(0, 50), // Keep last 50
+            totalWorkoutsCompleted: totalWk,
+            punchesThrownEst: totalP,
+            completedDates: [...state.completedDates, newActivity.timestamp],
+            activities: [newActivity, ...state.activities].slice(0, 50),
             ...(workoutId ? { lastWorkoutId: workoutId } : {})
           };
         }),
@@ -139,25 +246,66 @@ export const useAppStore = create<AppState>()(
             timestamp: new Date().toISOString()
           };
           const safePunches = Math.max(0, isNaN(punches) ? 0 : punches);
+          const totalP = (state.punchesThrownEst || 0) + safePunches;
+
+          if (state.supabaseUserId) {
+            pushActivity(state.supabaseUserId, newActivity);
+            pushUserStats(state.supabaseUserId, state.totalWorkoutsCompleted, totalP);
+          }
+
           return {
-            punchesThrownEst: (state.punchesThrownEst || 0) + safePunches,
+            punchesThrownEst: totalP,
             activities: [newActivity, ...state.activities].slice(0, 50)
           };
         }),
       setAiWorkout: (workout) => set({ aiWorkout: workout }),
-      setWorkoutPace: (pace) => set({ workoutPace: pace }),
-      toggleHaptics: () => set((state) => ({ hapticsEnabled: !state.hapticsEnabled })),
-      toggleVoiceCommands: () => set((state) => ({ voiceCommandsEnabled: !state.voiceCommandsEnabled })),
-      toggleSound: () => set((state) => ({ soundEnabled: !state.soundEnabled })),
-      toggleRandomizedCombos: () => set((state) => ({ randomizedCombos: !state.randomizedCombos })),
-      toggleBurnoutMode: () => set((state) => ({ burnoutMode: !state.burnoutMode })),
-      toggleVisualRhythm: () => set((state) => ({ visualRhythm: !state.visualRhythm })),
-      toggleCombinationMode: () => set((state) => ({ 
-        combinationMode: state.combinationMode === 'numbers' ? 'text' : 'numbers' 
-      })),
-      toggleStance: () => set((state) => ({
-        stance: state.stance === 'orthodox' ? 'southpaw' : 'orthodox'
-      })),
+      
+      // Settings wrapper
+      setWorkoutPace: (pace) => set((state) => {
+        const newState = { workoutPace: pace };
+        if (state.supabaseUserId) pushUserSettings(state.supabaseUserId, { ...state, ...newState });
+        return newState;
+      }),
+      toggleHaptics: () => set((state) => {
+        const newState = { hapticsEnabled: !state.hapticsEnabled };
+        if (state.supabaseUserId) pushUserSettings(state.supabaseUserId, { ...state, ...newState });
+        return newState;
+      }),
+      toggleVoiceCommands: () => set((state) => {
+        const newState = { voiceCommandsEnabled: !state.voiceCommandsEnabled };
+        if (state.supabaseUserId) pushUserSettings(state.supabaseUserId, { ...state, ...newState });
+        return newState;
+      }),
+      toggleSound: () => set((state) => {
+        const newState = { soundEnabled: !state.soundEnabled };
+        if (state.supabaseUserId) pushUserSettings(state.supabaseUserId, { ...state, ...newState });
+        return newState;
+      }),
+      toggleRandomizedCombos: () => set((state) => {
+        const newState = { randomizedCombos: !state.randomizedCombos };
+        if (state.supabaseUserId) pushUserSettings(state.supabaseUserId, { ...state, ...newState });
+        return newState;
+      }),
+      toggleBurnoutMode: () => set((state) => {
+        const newState = { burnoutMode: !state.burnoutMode };
+        if (state.supabaseUserId) pushUserSettings(state.supabaseUserId, { ...state, ...newState });
+        return newState;
+      }),
+      toggleVisualRhythm: () => set((state) => {
+        const newState = { visualRhythm: !state.visualRhythm };
+        if (state.supabaseUserId) pushUserSettings(state.supabaseUserId, { ...state, ...newState });
+        return newState;
+      }),
+      toggleCombinationMode: () => set((state) => {
+        const newState = { combinationMode: state.combinationMode === 'numbers' ? 'text' : 'numbers' as any };
+        if (state.supabaseUserId) pushUserSettings(state.supabaseUserId, { ...state, ...newState });
+        return newState;
+      }),
+      toggleStance: () => set((state) => {
+        const newState = { stance: state.stance === 'orthodox' ? 'southpaw' : 'orthodox' as any };
+        if (state.supabaseUserId) pushUserSettings(state.supabaseUserId, { ...state, ...newState });
+        return newState;
+      }),
       hasSeenSettingsTooltip: false,
       setHasSeenSettingsTooltip: (value) => set({ hasSeenSettingsTooltip: value }),
       resetStats: () => set({ totalWorkoutsCompleted: 0, punchesThrownEst: 0, completedDates: [], lastWorkoutId: null, activities: [], hasSeenSettingsTooltip: false }),

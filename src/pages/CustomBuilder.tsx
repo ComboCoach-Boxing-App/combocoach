@@ -164,6 +164,9 @@ export default function CustomBuilder() {
             value={title} 
             onChange={e => setTitle(e.target.value)} 
             style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff' }}
+            required
+            onInvalid={(e: any) => e.target.setCustomValidity('Please enter a workout title')}
+            onInput={(e: any) => e.target.setCustomValidity('')}
           />
         </div>
 
@@ -212,6 +215,8 @@ export default function CustomBuilder() {
             value={newCombo}
             onChange={(e) => setNewCombo(e.target.value)}
             style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff' }}
+            onInvalid={(e: any) => e.target.setCustomValidity('Please enter a combination')}
+            onInput={(e: any) => e.target.setCustomValidity('')}
           />
           <button 
             className="btn-primary spring-press"

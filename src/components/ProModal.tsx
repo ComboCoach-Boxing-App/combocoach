@@ -91,7 +91,7 @@ export default function ProModal() {
         <div className="pro-modal-footer">
           <button className="btn-primary pro-upgrade-btn spring-press" onClick={handleUpgrade}>
             <Sparkles size={18} />
-            {isPro ? "ALREADY PRO (MANAGE)" : "UNLOCK LIFETIME ACCESS - €2,99"}
+            {isPro ? "ALREADY PRO (MANAGE)" : "UNLOCK LIFETIME ACCESS - €2.99"}
           </button>
           <p className="secure-payment-text">
             <Lock size={10} /> Secure one-time payment. No hidden fees.

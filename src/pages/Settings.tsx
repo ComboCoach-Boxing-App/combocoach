@@ -3,6 +3,8 @@ import { useAppStore } from '../store/useAppStore';
 import { Volume2, VolumeX, Vibrate, VibrateOff, Trash2, ArrowLeft, Type, Hash, Shield, Mic, MicOff, Timer, Wand2, Lock, Music, Smartphone, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
+import { useAuth } from '../contexts/AuthContext';
+import { LogOut, LogIn, User as UserIcon } from 'lucide-react';
 
 export default function Settings() {
   const { 
@@ -31,6 +33,7 @@ export default function Settings() {
     fullReset,
     addManualActivity
   } = useAppStore();
+  const { user, isGuest, signOut } = useAuth();
   const navigate = useNavigate();
   const [manualPunches, setManualPunches] = useState('');
 
@@ -66,7 +69,45 @@ export default function Settings() {
         </button>
       </div>
 
-      <div className="card animate-in" style={{ marginTop: '32px', animationDelay: '0.1s' }}>
+      <div className="card animate-in" style={{ marginTop: '32px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <h2 className="heading-m" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <UserIcon size={20} color="var(--accent-primary)" />
+          Account Management
+        </h2>
+        <div className="flex-between" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '1rem', fontWeight: '700' }}>
+              {user ? 'Logged In' : 'Guest Mode'}
+            </span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              {user ? user.email : 'Free Tier Only. No Cloud Sync.'}
+            </span>
+          </div>
+        </div>
+        
+        <button 
+            className="btn-primary spring-press" 
+            style={{ 
+              background: user ? 'rgba(255, 255, 255, 0.05)' : 'var(--primary)', 
+              color: user ? '#fff' : '#fff', 
+              border: user ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+              boxShadow: 'none'
+            }}
+            onClick={async () => {
+              if (user) {
+                if (window.confirm('Are you sure you want to sign out?')) {
+                  await signOut();
+                }
+              } else {
+                await signOut(); // This clears guest state
+              }
+            }}
+          >
+            {user ? <><LogOut size={18} /> Sign Out</> : <><LogIn size={18} /> Sign In / Register</>}
+        </button>
+      </div>
+
+      <div className="card animate-in" style={{ marginTop: '24px', animationDelay: '0.1s' }}>
         <h2 className="heading-m" style={{ marginBottom: '24px', letterSpacing: '0.5px' }}>Preferences</h2>
         
         <div className="flex-between spring-press" style={{ marginBottom: '24px', cursor: 'pointer' }} onClick={toggleSound}>
@@ -619,6 +660,8 @@ export default function Settings() {
                 fontSize: '0.9rem',
                 outline: 'none'
               }}
+              onInvalid={(e: any) => e.target.setCustomValidity('Please enter a number of punches')}
+              onInput={(e: any) => e.target.setCustomValidity('')}
             />
             <button 
               className="btn-primary" 
