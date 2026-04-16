@@ -15,6 +15,7 @@ import AuthScreen from './pages/AuthScreen';
 import { useEffect } from 'react';
 import { useAppStore } from './store/useAppStore';
 import { useAuth } from './contexts/AuthContext';
+import { Analytics } from '@vercel/analytics/react';
 import './App.css';
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
 
   return (
     <>
+      <Analytics />
       {user === null && isGuest && <LoadingScreen />} {/* Minimal loading if guest takes a sec */}
       <ProModal />
       <BrowserRouter>
