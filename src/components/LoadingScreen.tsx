@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
 import loadingBg from '../assets/loading_bg.jpg';
 import appLogo from '../assets/app_logo.png';
 
