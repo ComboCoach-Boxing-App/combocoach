@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Workouts from './pages/Workouts';
@@ -54,6 +55,7 @@ function App() {
           <Route path="/workout/:id/active" element={<ActiveWorkout />} />
         </Routes>
       </BrowserRouter>
+      <Analytics />
     </>
   );
 }
