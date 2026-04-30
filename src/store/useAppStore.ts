@@ -176,7 +176,7 @@ export const useAppStore = create<AppState>()(
         const { verifyEntitlement } = await import('../utils/entitlements');
         const isValid = await verifyEntitlement(userId, proSignature);
         if (!isValid) {
-          console.warn('Pro status verification failed. Reverting to free tier.');
+          if (import.meta.env.DEV) console.warn('Pro status verification failed. Reverting to free tier.');
           set({ isPro: false, proSignature: null });
         }
       },

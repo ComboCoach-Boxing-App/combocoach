@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setLoading(false);
     }).catch(err => {
-      console.error("Supabase Session Error:", err);
+      if (import.meta.env.DEV) console.error("Supabase Session Error:", err);
       setLoading(false);
     });
 

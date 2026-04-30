@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.boxing.app',
+  appId: 'com.combocoach_boxing.app',
   appName: 'ComboCoach Boxing App',
   webDir: 'dist'
 };

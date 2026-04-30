@@ -15,6 +15,8 @@ import AuthScreen from './pages/AuthScreen';
 import { useEffect, useState } from 'react';
 import { useAppStore } from './store/useAppStore';
 import { useAuth } from './contexts/AuthContext';
+import { supabase } from './utils/supabase';
+
 import { Analytics } from '@vercel/analytics/react';
 import { Capacitor } from '@capacitor/core';
 import './App.css';
@@ -25,6 +27,25 @@ function App() {
   const [showMobileSplash, setShowMobileSplash] = useState(() => {
     return Capacitor.getPlatform() !== 'web';
   });
+  const [todos, setTodos] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function getTodos() {
+      try {
+        const { data: todos, error } = await supabase.from('todos').select();
+        if (error) throw error;
+        if (todos) {
+          setTodos(todos);
+        }
+      } catch (err) {
+        console.error('Error fetching todos:', err);
+      }
+    }
+
+    if (user || isGuest) {
+      getTodos();
+    }
+  }, [user, isGuest]);
 
   useEffect(() => {
     verifyProStatus();
@@ -66,7 +87,19 @@ function App() {
             <Route path="/ai-workout" element={<GenerateWorkout />} />
             <Route path="/workout/custom-builder" element={<CustomBuilder />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/todos" element={
+              <div className="p-8">
+                <h1 className="text-2xl font-bold mb-4">Supabase Todos Test</h1>
+                <ul className="list-disc pl-5">
+                  {todos.map((todo) => (
+                    <li key={todo.id} className="mb-2">{todo.name}</li>
+                  ))}
+                  {todos.length === 0 && <li>No todos found or table doesn't exist.</li>}
+                </ul>
+              </div>
+            } />
           </Route>
+
           <Route path="/workout/:id/active" element={<ActiveWorkout />} />
         </Routes>
       </BrowserRouter>
